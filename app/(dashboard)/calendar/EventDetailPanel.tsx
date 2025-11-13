@@ -6,10 +6,9 @@ import { Calendar, Tag, BookOpen, Inbox } from 'lucide-react';
 import { EventApi } from '@fullcalendar/core';
 
 interface EventDetailPanelProps {
-    event: EventApi | null; // Sự kiện được chọn
+    event: EventApi | null;
 }
 
-// Hàm helper format ngày tháng (giống như trước)
 export function formatEventDate(event: EventApi): string {
     if (event.allDay) {
         return new Date(event.start || 0).toLocaleString('vi-VN', {
@@ -28,7 +27,6 @@ export function formatEventDate(event: EventApi): string {
 }
 
 export function EventDetailPanel({ event }: EventDetailPanelProps) {
-    // --- Trường hợp 1: Chưa chọn sự kiện ---
     if (!event) {
         return (
             <Card className="h-full">
@@ -45,8 +43,6 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
             </Card>
         );
     }
-
-    // --- Trường hợp 2: Đã chọn sự kiện ---
     const { type, courseName } = event.extendedProps;
 
     return (
@@ -55,7 +51,6 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                 <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-                {/* 1. Tiêu đề (Tên sự kiện) */}
                 <div className="space-y-1">
                     <h3 className="text-xl font-semibold">{event.title}</h3>
                     {courseName && (
@@ -64,8 +59,6 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                         </p>
                     )}
                 </div>
-
-                {/* 2. Chi tiết sự kiện */}
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <Calendar className="w-5 h-5 text-gray-500" />
@@ -83,12 +76,6 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                             {type === 'class' && 'Lịch học'}
                         </Badge>
                     </div>
-
-                    {/* (Bạn có thể thêm mô tả hoặc các nút hành động ở đây) */}
-                    {/* <div className="flex items-start gap-3">
-                        <BookOpen className="w-5 h-5 text-gray-500 mt-1" />
-                        <p className="text-sm">Mô tả sự kiện...</p>
-                    </div> */}
                 </div>
             </CardContent>
         </Card>
