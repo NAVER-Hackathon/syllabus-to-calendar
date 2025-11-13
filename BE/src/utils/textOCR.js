@@ -1,6 +1,7 @@
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
+const { processWithAI } = require("./clovaStudio");
 
 async function processOCR(filePath, originalName) {
   const SECRET_KEY_OCR = process.env.SECRET_KEY_OCR;
@@ -32,4 +33,14 @@ async function processOCR(filePath, originalName) {
   return response.data;
 }
 
-module.exports = { processOCR };
+async function processOCRWithAI(filePath, originalName, systemPrompt) {
+  const ocrResult = await processOCR(filePath, originalName);
+  
+  const extractedText = ocrResult.images[0].fields
+    .map(field => field.inferText)
+    .join(' ');
+  
+  return extractedText;
+}
+
+module.exports = { processOCR, processOCRWithAI };
