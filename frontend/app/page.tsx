@@ -1,9 +1,9 @@
-'use client'; // can quit
-
+"use client" // can quit
 import { useState } from 'react';
 import { Upload, FileText, Image, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
@@ -46,7 +46,9 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-slate-900">Syllabus to Calendar</h1>
             </div>
             <nav className="flex gap-4">
-              <Button variant="ghost">My Plans</Button>
+              <Link href="/plan">
+                <Button variant="ghost">My Plans</Button>
+              </Link>
               <Button variant="ghost">Settings</Button>
             </nav>
           </div>
