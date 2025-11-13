@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
-const { processOCRWithAI } = require("./src/utils/textOCR");
-const { extractSyllabusData } = require("./src/utils/clovaStudio");
+const { processOCRWithAI } = require("./src/services/textOCR");
+const { extractSyllabusData } = require("./src/services/clovaStudio");
 
 const app = express();
 const PORT = 3000;

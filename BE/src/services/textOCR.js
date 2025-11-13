@@ -1,7 +1,7 @@
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
-const { processWithAI } = require("./clovaStudio");
+const { processWithAI } = require("../services/clovaStudio");
 
 async function processOCR(filePath, originalName) {
   const SECRET_KEY_OCR = process.env.SECRET_KEY_OCR;

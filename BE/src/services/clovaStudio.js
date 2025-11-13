@@ -11,11 +11,12 @@ async function processWithAI(ocrText, systemPrompt, userPrompt) {
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.1,
-      topP: 0.8,
-      topK: 5,
+      temperature: 0,
+      topP: 0.1,
+      topK: 1,
       repeatPenalty: 1.0,
-      includeAiFilters: true,
+      includeAiFilters: false,
+      stopBefore: ["\n\n\n"],
     },
     {
       headers: {
@@ -24,7 +25,7 @@ async function processWithAI(ocrText, systemPrompt, userPrompt) {
         "Content-Type": "application/json",
         Accept: "application/json"
       },
-      timeout: 60000
+      timeout: 30000
     }
   );
 
@@ -87,30 +88,20 @@ ${ocrText}`;
   try {
     const rawResponse = await processWithAI(ocrText, systemPrompt, userPrompt);
     
-    // Try to extract JSON from response
+    // Extract JSON efficiently
     let jsonStr = rawResponse;
-    
-    // Remove any text before first {
     const firstBrace = jsonStr.indexOf('{');
-    if (firstBrace > 0) {
-      jsonStr = jsonStr.substring(firstBrace);
-    }
-    
-    // Remove any text after last }
     const lastBrace = jsonStr.lastIndexOf('}');
-    if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
-      jsonStr = jsonStr.substring(0, lastBrace + 1);
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
     }
     
-    // Try to parse
     const parsed = JSON.parse(jsonStr);
     return JSON.stringify(parsed);
     
   } catch (parseError) {
     console.error('JSON Parse Error:', parseError.message);
-    console.error('Raw response:', rawResponse);
-    
-    // Return fallback response
     return JSON.stringify({
       success: false,
       data: null,
