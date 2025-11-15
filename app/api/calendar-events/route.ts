@@ -1,16 +1,12 @@
-// file: app/api/calendar-events/route.ts
-
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 import { query } from '@/lib/db';
 
-// --- Interfaces (Commented out as they are not currently used) ---
-/*
 // Interface for Assignments and Exams
 interface DbEventItem {
     id: string;
     title: string;
-    date?: string; // DATETIME from assignments.due_date or exams.date
+    date?: string;
     course_name: string;
     course_color: string;
     type: 'assignment' | 'exam';
@@ -28,91 +24,132 @@ interface DbClassItem {
     course_end_date: string;
 }
 
+// Interface for Milestones
+interface DbMilestoneItem {
+    id: string;
+    title: string;
+    date: string;
+    course_name: string;
+    course_color: string;
+    type: 'milestone';
+}
+
 // Interface for Courses (All-day)
 interface DbCourseItem {
     id: string;
-    title: string; // Course name
-    date: string;  // Start date
+    title: string;
+    date: string;
     course_name: string;
     course_color: string;
     type: 'course';
 }
-*/
 
-/**
- * @description
- * API endpoint to fetch all calendar-related items for the authenticated user.
- * It queries assignments, exams, class schedules, and courses,
- * then formats them into a FullCalendar-compatible event array.
- */
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        // --- NOTE: All data fetching is temporarily disabled as requested ---
-        // --- To re-enable, uncomment the logic below ---
-
-        /*
         const session = await requireAuth();
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Get courseId from query parameter
+        const { searchParams } = new URL(request.url);
+        const courseId = searchParams.get('courseId');
+
         const events = [];
 
         // --- Query 1: Get Assignments ---
-        const assignments = await query<DbEventItem>(
-            `SELECT 
-                a.id, a.title, a.due_date as date, 
-                c.name as course_name, c.color as course_color, 'assignment' as type
-            FROM assignments a
-            JOIN courses c ON a.course_id = c.id
-            WHERE c.user_id = ?`,
-            [session.userId]
-        );
+        let assignmentQuery = `SELECT 
+            a.id, a.title, a.due_date as date, 
+            c.name as course_name, c.color as course_color, 'assignment' as type
+        FROM assignments a
+        JOIN courses c ON a.course_id = c.id
+        WHERE c.user_id = ?`;
+
+        const assignmentParams: any[] = [session.userId];
+
+        if (courseId) {
+            assignmentQuery += ` AND c.id = ?`;
+            assignmentParams.push(courseId);
+        }
+
+        const assignments = await query<DbEventItem>(assignmentQuery, assignmentParams);
 
         // --- Query 2: Get Exams ---
-        const exams = await query<DbEventItem>(
-            `SELECT 
-                e.id, e.title, e.date,
-                c.name as course_name, c.color as course_color, 'exam' as type
-            FROM exams e
-            JOIN courses c ON e.course_id = c.id
-            WHERE c.user_id = ?`,
-            [session.userId]
-        );
+        let examQuery = `SELECT 
+            e.id, e.title, e.date,
+            c.name as course_name, c.color as course_color, 'exam' as type
+        FROM exams e
+        JOIN courses c ON e.course_id = c.id
+        WHERE c.user_id = ?`;
 
-        // --- Query 3: Get Class Schedules (Recurring) ---
-        const classSchedules = await query<DbClassItem>(
-            `SELECT 
-                cs.id, cs.day_of_week, cs.start_time, cs.end_time,
-                c.name as course_name, c.color as course_color,
-                c.start_date as course_start_date, 
-                c.end_date as course_end_date
-            FROM class_schedules cs
-            JOIN courses c ON cs.course_id = c.id
-            WHERE c.user_id = ?`,
-            [session.userId]
-        );
+        const examParams: any[] = [session.userId];
 
-        // --- Query 4: Get Courses (All-day event on start date) ---
-        const courses = await query<DbCourseItem>(
-            `SELECT 
-                id, name as title, start_date as date,
-                name as course_name, color as course_color, 'course' as type
-            FROM courses
-            WHERE user_id = ? AND start_date IS NOT NULL`,
-            [session.userId]
-        );
+        if (courseId) {
+            examQuery += ` AND c.id = ?`;
+            examParams.push(courseId);
+        }
 
+        const exams = await query<DbEventItem>(examQuery, examParams);
 
-        // --- Processing Loops (Disabled) ---
+        // --- Query 3: Get Milestones ---
+        let milestoneQuery = `SELECT 
+            m.id, m.title, m.date,
+            c.name as course_name, c.color as course_color, 'milestone' as type
+        FROM milestones m
+        JOIN courses c ON m.course_id = c.id
+        WHERE c.user_id = ?`;
 
-        // Format Assignments
+        const milestoneParams: any[] = [session.userId];
+
+        if (courseId) {
+            milestoneQuery += ` AND c.id = ?`;
+            milestoneParams.push(courseId);
+        }
+
+        const milestones = await query<DbMilestoneItem>(milestoneQuery, milestoneParams);
+
+        // --- Query 4: Get Class Schedules (Recurring) ---
+        let classQuery = `SELECT 
+            cs.id, cs.day_of_week, cs.start_time, cs.end_time,
+            c.name as course_name, c.color as course_color,
+            c.start_date as course_start_date, 
+            c.end_date as course_end_date
+        FROM class_schedules cs
+        JOIN courses c ON cs.course_id = c.id
+        WHERE c.user_id = ?`;
+
+        const classParams: any[] = [session.userId];
+
+        if (courseId) {
+            classQuery += ` AND c.id = ?`;
+            classParams.push(courseId);
+        }
+
+        const classSchedules = await query<DbClassItem>(classQuery, classParams);
+
+        // --- Query 5: Get Courses (All-day event on start date) ---
+        let courseQuery = `SELECT 
+            id, name as title, start_date as date,
+            name as course_name, color as course_color, 'course' as type
+        FROM courses
+        WHERE user_id = ? AND start_date IS NOT NULL`;
+
+        const courseParams: any[] = [session.userId];
+
+        if (courseId) {
+            courseQuery += ` AND id = ?`;
+            courseParams.push(courseId);
+        }
+
+        const courses = await query<DbCourseItem>(courseQuery, courseParams);
+
+        // --- Format Assignments ---
         for (const item of assignments) {
             if (item.date) {
                 events.push({
                     id: `assign-${item.id}`,
                     title: item.title,
-                    date: new Date(item.date),
+                    start: item.date,
                     backgroundColor: item.course_color,
                     textColor: '#ffffff',
                     extendedProps: { type: item.type, courseName: item.course_name }
@@ -120,13 +157,13 @@ export async function GET() {
             }
         }
 
-        // Format Exams
+        // --- Format Exams ---
         for (const item of exams) {
             if (item.date) {
                 events.push({
                     id: `exam-${item.id}`,
                     title: item.title,
-                    date: new Date(item.date),
+                    start: item.date,
                     backgroundColor: item.course_color,
                     textColor: '#ffffff',
                     extendedProps: { type: item.type, courseName: item.course_name }
@@ -134,7 +171,22 @@ export async function GET() {
             }
         }
 
-        // Format Class Schedules (Recurring)
+        // --- Format Milestones ---
+        for (const item of milestones) {
+            if (item.date) {
+                events.push({
+                    id: `milestone-${item.id}`,
+                    title: item.title,
+                    start: item.date,
+                    allDay: true,
+                    backgroundColor: item.course_color,
+                    textColor: '#ffffff',
+                    extendedProps: { type: item.type, courseName: item.course_name }
+                });
+            }
+        }
+
+        // --- Format Class Schedules (Recurring) ---
         for (const item of classSchedules) {
             events.push({
                 id: `class-${item.id}`,
@@ -142,39 +194,53 @@ export async function GET() {
                 daysOfWeek: [item.day_of_week],
                 startTime: item.start_time,
                 endTime: item.end_time,
-                startRecur: new Date(item.course_start_date),
-                endRecur: new Date(item.course_end_date),
+                startRecur: item.course_start_date,
+                endRecur: item.course_end_date,
                 backgroundColor: item.course_color,
                 textColor: '#ffffff',
                 extendedProps: { type: 'class', courseName: item.course_name }
             });
         }
 
-        // Format Courses (All-day)
-        for (const item of courses) {
+        // --- Format Courses (All-day) ---
+        let courseWithDatesQuery = `SELECT 
+            id, name as title, start_date as date, end_date,
+            name as course_name, color as course_color, 'course' as type
+        FROM courses
+        WHERE user_id = ? AND start_date IS NOT NULL`;
+
+        const courseWithDatesParams: any[] = [session.userId];
+
+        if (courseId) {
+            courseWithDatesQuery += ` AND id = ?`;
+            courseWithDatesParams.push(courseId);
+        }
+
+        const coursesWithDates = await query<DbCourseItem & { end_date: string }>(
+            courseWithDatesQuery,
+            courseWithDatesParams
+        );
+
+        for (const item of coursesWithDates) {
             if (item.date) {
                 events.push({
                     id: `course-${item.id}`,
-                    title: `Bắt đầu: ${item.title}`,
-                    date: item.date,
+                    title: `Start: ${item.title}`,
+                    start: item.date,
                     allDay: true,
                     backgroundColor: item.course_color,
                     textColor: '#ffffff',
                     extendedProps: {
                         type: item.type,
-                        courseName: item.course_name
+                        courseName: item.course_name,
+                        courseStartDate: item.date,
+                        courseEndDate: item.end_date
                     }
                 });
             }
         }
 
         return NextResponse.json(events);
-        */
-
-        // --- End of disabled code ---
-
-        // Return an empty array for the blank calendar view
-        return NextResponse.json([]);
 
     } catch (error) {
         console.error('Error fetching calendar events:', error);

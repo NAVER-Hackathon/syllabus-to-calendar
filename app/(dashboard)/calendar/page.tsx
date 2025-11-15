@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { EventApi } from '@fullcalendar/core';
 
 import FullCalendar from '@fullcalendar/react';
@@ -17,9 +17,42 @@ import { EventDetailPanel } from './EventDetailPanel';
 
 export default function CalendarPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const calendarRef = useRef<FullCalendar>(null);
 
     const [selectedEvent, setSelectedEvent] = useState<EventApi | null>(null);
+
+    const [events, setEvents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    //
+    const courseId = searchParams.get('courseId');
+
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                setLoading(true);
+                const url = courseId
+                    ? `/api/calendar-events?courseId=${courseId}`
+                    : '/api/calendar-events';
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch events');
+                }
+
+                const data = await response.json();
+                setEvents(data);
+            } catch (error) {
+                console.error('Error fetching calendar events:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, [courseId]);
 
     const handleEventClick = useCallback((clickInfo: any) => {
         console.log('Event clicked:', clickInfo.event.title);
@@ -38,11 +71,29 @@ export default function CalendarPage() {
 
     return (
         <div className="p-6 h-screen flex flex-col">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/courses')}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Courses
                 </Button>
+
+                {courseId ? (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/calendar')}
+                    >
+                        Show all events
+                    </Button>
+                ) : (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/courses')}
+                    >
+                        Filter by course
+                    </Button>
+                )}
             </div>
 
             <div className="flex flex-1 gap-6 min-h-0">
@@ -66,7 +117,7 @@ export default function CalendarPage() {
                         eventClick={handleEventClick}
                         select={handleDateSelect}
                         eventDrop={handleEventDrop}
-                        events={[]}
+                        events={events} //
 
                         eventContent={(arg) => {
                             const { type, courseName } = arg.event.extendedProps;

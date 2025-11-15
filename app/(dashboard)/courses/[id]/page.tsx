@@ -95,7 +95,7 @@ export default async function CourseDetailPage({
               <Link href={`/courses/${id}/edit`}>Edit Course</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/calendar">View Calendar</Link>
+              <Link href={`/calendar?courseId=${id}`}>View Calendar</Link>
             </Button>
           </div>
         </div>
@@ -103,4 +103,3 @@ export default async function CourseDetailPage({
     </div>
   );
 }
-
