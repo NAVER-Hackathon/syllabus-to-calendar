@@ -1,28 +1,37 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const { processOCRWithAI } = require("./src/services/textOCR");
 const { extractSyllabusData } = require("./src/services/clovaStudio");
+const { normalizeSyllabusResult } = require("./src/utils/resultNormalizer");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3001;
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-const upload = multer({ 
-  dest: 'uploads/',
+const upload = multer({
+  dest: "uploads/",
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf/;
-    const mimetype = allowedTypes.test(file.mimetype);
-    const extname = allowedTypes.test(file.originalname.toLowerCase());
-    mimetype && extname ? cb(null, true) : cb(new Error('Only JPEG, PNG, PDF allowed'));
-  }
+    const allowedExt = /\.(jpe?g|png|pdf)$/i;
+    const hasAllowedExt = allowedExt.test(file.originalname || "");
+    const mimetypeOk =
+      !file.mimetype ||
+      file.mimetype === "application/pdf" ||
+      file.mimetype.startsWith("image/");
+
+    if (hasAllowedExt || mimetypeOk) {
+      return cb(null, true);
+    }
+
+    return cb(new Error("Only JPEG, PNG, PDF allowed"));
+  },
 });
 
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 
 app.get("/", (req, res) => {
   res.send(`
@@ -102,55 +111,72 @@ app.get("/", (req, res) => {
 });
 
 // SSE endpoint for real-time progress
-app.post("/process-syllabus-stream", upload.single('image'), async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+app.post(
+  "/process-syllabus-stream",
+  upload.single("image"),
+  async (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
-  const sendProgress = (step, message) => {
-    res.write(`data: ${JSON.stringify({ step, message })}\n\n`);
-  };
+    const sendEvent = (payload) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
 
-  try {
-    if (!req.file) {
-      res.write(`data: ${JSON.stringify({ error: "Image file is required" })}\n\n`);
-      return res.end();
-    }
+    const sendProgress = (step, message) => {
+      sendEvent({ type: "progress", step, message });
+    };
 
-    sendProgress(1, 'Đang xử lý OCR...');
-    const extractedText = await processOCRWithAI(req.file.path, req.file.originalname);
-    fs.unlinkSync(req.file.path);
-    
-    sendProgress(2, 'Đang phân tích với AI...');
-    const aiResult = await extractSyllabusData(extractedText);
-    const parsedData = JSON.parse(aiResult);
-    
-    sendProgress(3, 'Hoàn thành!');
-    res.write(`data: ${JSON.stringify({ done: true, result: parsedData })}\n\n`);
-    res.end();
-  } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) {
+    try {
+      if (!req.file) {
+        sendEvent({
+          type: "error",
+          error: { message: "Image file is required" },
+        });
+        return res.end();
+      }
+
+      sendProgress(1, "Đang xử lý OCR...");
+      const extractedText = await processOCRWithAI(
+        req.file.path,
+        req.file.originalname
+      );
       fs.unlinkSync(req.file.path);
+
+      sendProgress(2, "Đang phân tích với AI...");
+      const aiResult = await extractSyllabusData(extractedText);
+      const normalizedResult = normalizeSyllabusResult(aiResult);
+
+      sendProgress(3, "Hoàn thành!");
+      sendEvent({ type: "result", done: true, payload: normalizedResult });
+      res.end();
+    } catch (error) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      sendEvent({ type: "error", error: { message: error.message } });
+      res.end();
     }
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
   }
-});
+);
 
 // Original JSON endpoint (keep for backward compatibility)
-app.post("/process-syllabus", upload.single('image'), async (req, res) => {
+app.post("/process-syllabus", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Image file is required" });
     }
 
-    const extractedText = await processOCRWithAI(req.file.path, req.file.originalname);
+    const extractedText = await processOCRWithAI(
+      req.file.path,
+      req.file.originalname
+    );
     fs.unlinkSync(req.file.path);
-    
+
     const aiResult = await extractSyllabusData(extractedText);
-    const parsedData = JSON.parse(aiResult);
-    
-    res.json(parsedData);
+    const normalizedResult = normalizeSyllabusResult(aiResult);
+
+    res.json(normalizedResult);
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -158,7 +184,7 @@ app.post("/process-syllabus", upload.single('image'), async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to process syllabus",
-      details: error.message
+      details: error.message,
     });
   }
 });

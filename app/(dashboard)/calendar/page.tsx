@@ -58,6 +58,16 @@ export default function CalendarPage() {
         console.log('Event clicked:', clickInfo.event.title);
         setSelectedEvent(clickInfo.event);
     }, []);
+    const handleEventDidMount = useCallback((info: any) => {
+        info.el.style.backgroundColor = 'transparent';
+        info.el.style.border = 'none';
+        info.el.style.padding = '0';
+        info.el.style.margin = '1px 0';
+        const mainFrame = info.el.querySelector('.fc-event-main-frame');
+        if (mainFrame) {
+            (mainFrame as HTMLElement).style.width = '100%';
+        }
+    }, []);
 
     const handleDateSelect = useCallback((selectInfo: any) => {
         setSelectedEvent(null); // bỏ chọn khi click ngày trống
@@ -112,21 +122,31 @@ export default function CalendarPage() {
                         editable={true}
                         selectable={true}
                         selectMirror={true}
-                        dayMaxEvents={true}
+                        dayMaxEvents={4}
                         nowIndicator={true}
                         eventClick={handleEventClick}
                         select={handleDateSelect}
                         eventDrop={handleEventDrop}
+                        eventDidMount={handleEventDidMount}
                         events={events} //
 
                         eventContent={(arg) => {
-                            const { type, courseName } = arg.event.extendedProps;
+                            const { indicatorColor } = arg.event.extendedProps;
+                            const dotColor =
+                                indicatorColor ||
+                                arg.event.backgroundColor ||
+                                arg.backgroundColor ||
+                                "#2563eb";
+
                             return (
-                                <div className="p-1 overflow-hidden text-xs">
-                                    <b className="truncate block">{arg.event.title}</b>
-                                    {courseName && (
-                                        <span className="truncate block opacity-70">{courseName}</span>
-                                    )}
+                                <div className="flex items-center gap-2 text-[11px] leading-tight w-full">
+                                    <span
+                                        className="inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: dotColor }}
+                                    />
+                                    <span className="truncate font-semibold text-slate-800">
+                                        {arg.event.title}
+                                    </span>
                                 </div>
                             );
                         }}

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { requireAuth } from "@/lib/session";
 import { query } from "@/lib/db";
+import { resolveUserId } from "@/lib/user-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +22,14 @@ interface Course {
 
 export default async function CoursesPage() {
   const session = await requireAuth();
+  const userId = await resolveUserId(session);
 
   const courses = await query<Course>(
     `SELECT id, name, code, term, instructor, start_date, end_date, color, created_at 
      FROM courses 
      WHERE user_id = ? 
      ORDER BY created_at DESC`,
-    [session.userId]
+    [userId]
   );
 
   return (

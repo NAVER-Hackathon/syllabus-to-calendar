@@ -1,6 +1,21 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 import { query } from '@/lib/db';
+import { resolveUserId } from '@/lib/user-resolver';
+
+const EVENT_COLORS: Record<string, { bg: string; text?: string }> = {
+    assignment: { bg: '#2563eb', text: '#ffffff' }, // blue
+    exam: { bg: '#dc2626', text: '#ffffff' }, // red
+};
+
+const getColorsForType = (type: string, fallback: string) => {
+    const config = EVENT_COLORS[type];
+    return {
+        backgroundColor: config?.bg ?? fallback,
+        textColor: config?.text ?? '#ffffff',
+        indicatorColor: config?.bg ?? fallback,
+    };
+};
 
 // Interface for Assignments and Exams
 interface DbEventItem {
@@ -50,6 +65,7 @@ export async function GET(request: Request) {
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const userId = await resolveUserId(session);
 
         // Get courseId from query parameter
         const { searchParams } = new URL(request.url);
@@ -65,7 +81,7 @@ export async function GET(request: Request) {
         JOIN courses c ON a.course_id = c.id
         WHERE c.user_id = ?`;
 
-        const assignmentParams: any[] = [session.userId];
+        const assignmentParams: any[] = [userId];
 
         if (courseId) {
             assignmentQuery += ` AND c.id = ?`;
@@ -82,7 +98,7 @@ export async function GET(request: Request) {
         JOIN courses c ON e.course_id = c.id
         WHERE c.user_id = ?`;
 
-        const examParams: any[] = [session.userId];
+        const examParams: any[] = [userId];
 
         if (courseId) {
             examQuery += ` AND c.id = ?`;
@@ -99,7 +115,7 @@ export async function GET(request: Request) {
         JOIN courses c ON m.course_id = c.id
         WHERE c.user_id = ?`;
 
-        const milestoneParams: any[] = [session.userId];
+        const milestoneParams: any[] = [userId];
 
         if (courseId) {
             milestoneQuery += ` AND c.id = ?`;
@@ -118,7 +134,7 @@ export async function GET(request: Request) {
         JOIN courses c ON cs.course_id = c.id
         WHERE c.user_id = ?`;
 
-        const classParams: any[] = [session.userId];
+        const classParams: any[] = [userId];
 
         if (courseId) {
             classQuery += ` AND c.id = ?`;
@@ -134,7 +150,7 @@ export async function GET(request: Request) {
         FROM courses
         WHERE user_id = ? AND start_date IS NOT NULL`;
 
-        const courseParams: any[] = [session.userId];
+        const courseParams: any[] = [userId];
 
         if (courseId) {
             courseQuery += ` AND id = ?`;
@@ -146,13 +162,18 @@ export async function GET(request: Request) {
         // --- Format Assignments ---
         for (const item of assignments) {
             if (item.date) {
+                const colors = getColorsForType(item.type, item.course_color);
                 events.push({
                     id: `assign-${item.id}`,
                     title: item.title,
                     start: item.date,
-                    backgroundColor: item.course_color,
-                    textColor: '#ffffff',
-                    extendedProps: { type: item.type, courseName: item.course_name }
+                    backgroundColor: colors.backgroundColor,
+                    textColor: colors.textColor,
+                    extendedProps: {
+                        type: item.type,
+                        courseName: item.course_name,
+                        indicatorColor: colors.indicatorColor,
+                    }
                 });
             }
         }
@@ -160,13 +181,18 @@ export async function GET(request: Request) {
         // --- Format Exams ---
         for (const item of exams) {
             if (item.date) {
+                const colors = getColorsForType(item.type, item.course_color);
                 events.push({
                     id: `exam-${item.id}`,
                     title: item.title,
                     start: item.date,
-                    backgroundColor: item.course_color,
-                    textColor: '#ffffff',
-                    extendedProps: { type: item.type, courseName: item.course_name }
+                    backgroundColor: colors.backgroundColor,
+                    textColor: colors.textColor,
+                    extendedProps: {
+                        type: item.type,
+                        courseName: item.course_name,
+                        indicatorColor: colors.indicatorColor,
+                    }
                 });
             }
         }
@@ -181,7 +207,11 @@ export async function GET(request: Request) {
                     allDay: true,
                     backgroundColor: item.course_color,
                     textColor: '#ffffff',
-                    extendedProps: { type: item.type, courseName: item.course_name }
+                    extendedProps: {
+                        type: item.type,
+                        courseName: item.course_name,
+                        indicatorColor: item.course_color,
+                    }
                 });
             }
         }
@@ -198,7 +228,11 @@ export async function GET(request: Request) {
                 endRecur: item.course_end_date,
                 backgroundColor: item.course_color,
                 textColor: '#ffffff',
-                extendedProps: { type: 'class', courseName: item.course_name }
+                extendedProps: {
+                    type: 'class',
+                    courseName: item.course_name,
+                    indicatorColor: item.course_color,
+                }
             });
         }
 
@@ -209,7 +243,7 @@ export async function GET(request: Request) {
         FROM courses
         WHERE user_id = ? AND start_date IS NOT NULL`;
 
-        const courseWithDatesParams: any[] = [session.userId];
+        const courseWithDatesParams: any[] = [userId];
 
         if (courseId) {
             courseWithDatesQuery += ` AND id = ?`;
@@ -234,7 +268,8 @@ export async function GET(request: Request) {
                         type: item.type,
                         courseName: item.course_name,
                         courseStartDate: item.date,
-                        courseEndDate: item.end_date
+                        courseEndDate: item.end_date,
+                        indicatorColor: item.course_color,
                     }
                 });
             }

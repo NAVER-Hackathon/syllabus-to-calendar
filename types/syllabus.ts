@@ -8,15 +8,33 @@ export interface SyllabusUpload {
   courseId?: string;
 }
 
+export interface NormalizedSyllabusEvent {
+  type: "assignment" | "exam";
+  title: string;
+  dueDate: string;
+  description?: string;
+}
+
+export interface NormalizedSyllabusData {
+  courseName: string;
+  events: NormalizedSyllabusEvent[];
+}
+
+export interface NormalizedSyllabusResult {
+  success: boolean;
+  data: NormalizedSyllabusData;
+  error?: string;
+}
+
 export interface ParsedSyllabus {
   courseName?: string;
   courseCode?: string;
   term?: string;
   instructor?: string;
-  startDate?: Date;
-  endDate?: Date;
-  assignments: ParsedAssignment[];
-  exams: ParsedExam[];
+  startDate?: Date | string;
+  endDate?: Date | string;
+  assignments?: ParsedAssignment[];
+  exams?: ParsedExam[];
   classSchedule?: ParsedClassSchedule[];
   rawText?: string;
   confidence?: number;
@@ -24,13 +42,13 @@ export interface ParsedSyllabus {
 
 export interface ParsedAssignment {
   title: string;
-  dueDate?: Date;
+  dueDate?: Date | string;
   description?: string;
 }
 
 export interface ParsedExam {
   title: string;
-  date?: Date;
+  date?: Date | string;
   time?: string;
   location?: string;
 }

@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/session";
 import { queryOne } from "@/lib/db";
+import { resolveUserId } from "@/lib/user-resolver";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { DeleteCourseButton } from "@/components/course/DeleteCourseButton";
 
 export const dynamic = "force-dynamic";
 
@@ -19,19 +21,23 @@ interface Course {
   color: string;
 }
 
-export default async function CourseDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+type CoursePageParams = { params: Promise<{ id: string }> };
+
+export default async function CourseDetailPage({ params }: CoursePageParams) {
   const session = await requireAuth();
-  const { id } = await params;
+  const userId = await resolveUserId(session);
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
+
+  if (!id) {
+    notFound();
+  }
 
   const course = await queryOne<Course>(
     `SELECT id, name, code, term, instructor, start_date, end_date, color 
      FROM courses 
      WHERE id = ? AND user_id = ?`,
-    [id, session.userId]
+    [id, userId]
   );
 
   if (!course) {
@@ -97,6 +103,7 @@ export default async function CourseDetailPage({
             <Button variant="outline" asChild>
               <Link href={`/calendar?courseId=${id}`}>View Calendar</Link>
             </Button>
+            <DeleteCourseButton courseId={id} courseName={course.name} />
           </div>
         </div>
       </Card>
