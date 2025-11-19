@@ -10,35 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2, Plus, X } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/date-utils";
-
-interface ParsedData {
-  courseName?: string;
-  courseCode?: string;
-  term?: string;
-  instructor?: string;
-  startDate?: string;
-  endDate?: string;
-  assignments?: Array<{
-    title: string;
-    dueDate?: string;
-    description?: string;
-  }>;
-  exams?: Array<{
-    title: string;
-    date?: string;
-    time?: string;
-    location?: string;
-  }>;
-  classSchedule?: Array<{
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-    location?: string;
-  }>;
-}
+import { ParsedSyllabus } from "@/types/syllabus";
 
 interface CourseCreationFormProps {
-  parsedData?: ParsedData;
+  parsedData?: ParsedSyllabus;
   uploadId?: string;
 }
 
@@ -50,8 +25,6 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
 
   // Course info - pre-fill from parsed data
   const [courseName, setCourseName] = useState(parsedData?.courseName || "");
-  const [courseCode, setCourseCode] = useState(parsedData?.courseCode || "");
-  const [term, setTerm] = useState(parsedData?.term || "");
   const [instructor, setInstructor] = useState(parsedData?.instructor || "");
   const [startDate, setStartDate] = useState(
     parsedData?.startDate ? formatDate(new Date(parsedData.startDate)) : ""
@@ -146,12 +119,6 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
       return;
     }
 
-    if (!startDate || !endDate) {
-      setError("Start date and end date are required");
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch("/api/courses", {
         method: "POST",
@@ -160,11 +127,9 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
         },
         body: JSON.stringify({
           name: courseName,
-          code: courseCode,
-          term,
           instructor,
-          startDate,
-          endDate,
+          startDate: startDate || null,
+          endDate: endDate || null,
           assignments: assignments.filter((a) => a.title.trim() && a.dueDate),
           exams: exams.filter((e) => e.title.trim() && e.date),
           classSchedule: classSchedules.filter(
@@ -201,9 +166,8 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
 
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/courses/${data.course.id}`);
-        router.refresh();
-      }, 1500);
+        router.push(`/calendar?courseId=${data.course.id}`);
+      }, 800);
     } catch (error) {
       setError("An error occurred. Please try again.");
       setLoading(false);
@@ -266,24 +230,6 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="courseCode">Course Code</Label>
-            <Input
-              id="courseCode"
-              value={courseCode}
-              onChange={(e) => setCourseCode(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="term">Term</Label>
-            <Input
-              id="term"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="instructor">Instructor</Label>
             <Input
               id="instructor"
@@ -293,28 +239,22 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="startDate">
-              Start Date <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="startDate">Start Date</Label>
             <Input
               id="startDate"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              required
               disabled={loading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endDate">
-              End Date <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="endDate">End Date</Label>
             <Input
               id="endDate"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              required
               disabled={loading}
             />
           </div>

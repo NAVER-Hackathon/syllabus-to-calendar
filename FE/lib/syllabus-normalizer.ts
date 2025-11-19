@@ -43,6 +43,9 @@ export function normalizedToParsedSyllabus(
 
   return {
     courseName: data.courseName,
+    instructor: data.instructor || undefined,
+    startDate: data.startDate ? toISO(data.startDate) : undefined,
+    endDate: data.endDate ? toISO(data.endDate) : undefined,
     assignments,
     exams,
     classSchedule: [],

@@ -148,13 +148,13 @@ app.post(
       const normalizedResult = normalizeSyllabusResult(aiResult);
 
       sendProgress(3, "Hoàn thành!");
-      sendEvent({ type: "result", done: true, payload: normalizedResult });
+      sendEvent({ type: "result", done: true, result: normalizedResult });
       res.end();
     } catch (error) {
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
-      sendEvent({ type: "error", error: { message: error.message } });
+      sendEvent({ type: "error", error: error.message || "Unknown error" });
       res.end();
     }
   }

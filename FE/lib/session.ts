@@ -5,9 +5,16 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.NEXTAUTH_SECRET || "your-secret-key-here-change-in-production"
 );
 
+const isDev = process.env.NODE_ENV !== "production";
+const MOCK_USER = {
+  userId: "demo-user",
+  email: "demo@example.com",
+} as const;
+
 export interface SessionUser {
   userId: string;
   email: string;
+  isMock?: boolean;
 }
 
 /**
@@ -19,7 +26,7 @@ export async function getSession(): Promise<SessionUser | null> {
     const token = cookieStore.get("auth-token")?.value;
 
     if (!token) {
-      return null;
+      return isDev ? { ...MOCK_USER, isMock: true } : null;
     }
 
     const { payload } = await jwtVerify(token, JWT_SECRET);
@@ -27,9 +34,10 @@ export async function getSession(): Promise<SessionUser | null> {
     return {
       userId: payload.userId as string,
       email: payload.email as string,
+      isMock: false,
     };
   } catch (error) {
-    return null;
+    return isDev ? { ...MOCK_USER, isMock: true } : null;
   }
 }
 

@@ -38,8 +38,6 @@ export function ManualEntryForm() {
 
   // Course info
   const [courseName, setCourseName] = useState("");
-  const [courseCode, setCourseCode] = useState("");
-  const [term, setTerm] = useState("");
   const [instructor, setInstructor] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -134,8 +132,6 @@ export function ManualEntryForm() {
         },
         body: JSON.stringify({
           name: courseName,
-          code: courseCode,
-          term,
           instructor,
           startDate,
           endDate,
@@ -198,26 +194,6 @@ export function ManualEntryForm() {
               required
               disabled={loading}
               placeholder="Introduction to Computer Science"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="courseCode">Course Code</Label>
-            <Input
-              id="courseCode"
-              value={courseCode}
-              onChange={(e) => setCourseCode(e.target.value)}
-              disabled={loading}
-              placeholder="CS101"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="term">Term</Label>
-            <Input
-              id="term"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              disabled={loading}
-              placeholder="Fall 2025"
             />
           </div>
           <div className="space-y-2">

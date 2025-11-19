@@ -22,15 +22,26 @@ async function processOCR(filePath, originalName) {
     contentType: `image/${fileExtension}`
   });
 
-  const response = await axios.post(CLOVA_OCR_URL, formData, {
-    headers: {
-      "X-OCR-SECRET": SECRET_KEY_OCR,
-      ...formData.getHeaders()
-    },
-    timeout: 60000
-  });
+  try {
+    const response = await axios.post(CLOVA_OCR_URL, formData, {
+      headers: {
+        "X-OCR-SECRET": SECRET_KEY_OCR,
+        ...formData.getHeaders()
+      },
+      timeout: 60000
+    });
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    console.error("Clova OCR Error:");
+    if (error.response) {
+      console.error("- Status:", error.response.status);
+      console.error("- Data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error("- Message:", error.message);
+    }
+    throw error;
+  }
 }
 
 async function processOCRWithAI(filePath, originalName, systemPrompt) {

@@ -2,12 +2,12 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { EventApi } from '@fullcalendar/core';
+import { EventApi } from '@fullcalendar/core/index.js';
 
 import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+import dayGridPlugin from '@fullcalendar/daygrid/index.js';
+import timeGridPlugin from '@fullcalendar/timegrid/index.js';
+import interactionPlugin from '@fullcalendar/interaction/index.js';
 
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { existsSync } from "fs";
-import { query, queryOne } from "@/lib/db";
-import { requireAuth } from "@/lib/session";
-
-// This is a placeholder for NAVER AI integration
-// You'll need to implement actual CLOVA OCR and CLOVA Studio API calls
+import { join } from "path";
+import { readFile, unlink } from "fs/promises";
+import { query } from "@/lib/db";
+import { NormalizedSyllabusResult, ParsedSyllabus } from "@/types/syllabus";
+import { normalizedToParsedSyllabus } from "@/lib/syllabus-normalizer";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
+const getBackendApiUrl = () =>
+  (process.env.BACKEND_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 interface ParseRequest {
   fileId: string;
@@ -21,163 +21,141 @@ interface UpdateUploadRequest {
 }
 
 export async function POST(request: NextRequest) {
+  let filePath: string | null = null;
   try {
-    // Require authentication
-    const session = await requireAuth();
-
     const body: ParseRequest = await request.json();
     const { fileId, uploadId } = body;
 
     if (!fileId) {
       return NextResponse.json(
-        { error: "fileId is required" },
+        { success: false, error: "fileId is required" },
         { status: 400 }
       );
     }
 
-    // Get upload record from database if uploadId provided
-    let uploadRecord = null;
-    if (uploadId) {
-      uploadRecord = await queryOne(
-        "SELECT * FROM syllabus_uploads WHERE id = ?",
-        [uploadId]
-      );
-    }
-
-    // Check if file exists
-    const filePath = join(UPLOAD_DIR, fileId);
-    if (!existsSync(filePath)) {
-      // Update database status if record exists
+    const resolvedFilePath = join(UPLOAD_DIR, fileId);
+    filePath = resolvedFilePath;
+    if (!existsSync(resolvedFilePath)) {
       if (uploadId) {
         await query(
           "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
           ["failed", "File not found on server", uploadId]
         );
       }
+
       return NextResponse.json(
-        { error: "File not found" },
+        { success: false, error: "File not found" },
         { status: 404 }
       );
     }
 
-    // Use backend proxy approach for NAVER AI integration
-    // If BACKEND_API_URL is set, forward to backend service
-    // Otherwise, use mock implementation for development
-    
-    const BACKEND_API_URL = process.env.BACKEND_API_URL;
-    
-    if (BACKEND_API_URL) {
-      // Forward to backend proxy route
-      const proxyUrl = new URL("/api/backend/parse-syllabus", request.url);
-      const proxyRequest = new Request(proxyUrl.toString(), {
+    const fileBuffer = await readFile(resolvedFilePath);
+    let shouldCleanupFile = true;
+    const cleanupUploadedFile = async () => {
+      if (!shouldCleanupFile) return;
+      shouldCleanupFile = false;
+      try {
+        await unlink(resolvedFilePath);
+      } catch (cleanupError) {
+        console.warn("Failed to remove uploaded file:", cleanupError);
+      }
+    };
+    const originalName = resolvedFilePath.split("/").pop() || fileId;
+    const mimeType =
+      originalName.toLowerCase().endsWith(".pdf")
+        ? "application/pdf"
+        : originalName.toLowerCase().match(/\.(png|jpg|jpeg)$/)
+        ? "image/png"
+        : "application/octet-stream";
+
+    const formData = new FormData();
+    formData.append(
+      "image",
+      new Blob([fileBuffer], { type: mimeType }),
+      originalName
+    );
+
+    const backendResponse = await fetch(
+      `${getBackendApiUrl()}/process-syllabus`,
+      {
         method: "POST",
-        headers: request.headers,
-        body: JSON.stringify({ fileId, uploadId }),
-      });
-      
-      // Call the proxy route internally
-      const proxyResponse = await fetch(proxyRequest);
-      return proxyResponse;
+        body: formData,
+      }
+    );
+
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      if (uploadId) {
+        await query(
+          "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
+          ["failed", "Backend service error", uploadId]
+        );
+      }
+      await cleanupUploadedFile();
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Backend service failed: ${errorText || backendResponse.statusText}`,
+        },
+        { status: backendResponse.status }
+      );
     }
 
-    // Fallback: Mock implementation for development/testing
-    // Read file
-    const fileBuffer = await readFile(filePath);
-    const fileType = fileId.split(".").pop()?.toLowerCase();
+    const normalized: NormalizedSyllabusResult =
+      await backendResponse.json();
 
-    // Mock response for development
-    const mockParsedData = {
-      courseName: "Example Course",
-      courseCode: "CS101",
-      term: "Fall 2025",
-      instructor: "Dr. Smith",
-      startDate: new Date("2025-09-01").toISOString(),
-      endDate: new Date("2025-12-15").toISOString(),
-      assignments: [
-        {
-          title: "Assignment 1",
-          dueDate: new Date("2025-09-15").toISOString(),
-          description: "Complete exercises 1-5",
-        },
-      ],
-      exams: [
-        {
-          title: "Midterm Exam",
-          date: new Date("2025-10-15").toISOString(),
-          time: "10:00 AM",
-        },
-      ],
-      classSchedule: [
-        {
-          dayOfWeek: 1, // Monday
-          startTime: "09:00",
-          endTime: "10:30",
-          location: "Room 101",
-        },
-      ],
-    };
-
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // TODO: Replace with actual parsing logic
-    // For now, randomly succeed or fail to demonstrate error handling
-    const shouldSucceed = Math.random() > 0.2; // 80% success rate for demo
-
-    if (shouldSucceed) {
-      // Save parsed data to database
+    if (!normalized.success) {
       if (uploadId) {
-        try {
-          await query(
-            `UPDATE syllabus_uploads 
+        await query(
+          "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
+          ["failed", normalized.error || "AI parsing failed", uploadId]
+        );
+      }
+
+      await cleanupUploadedFile();
+      return NextResponse.json(
+        { success: false, error: normalized.error || "AI parsing failed" },
+        { status: 502 }
+      );
+    }
+
+    const parsedData: ParsedSyllabus = normalizedToParsedSyllabus(
+      normalized.data
+    );
+
+    if (uploadId) {
+      try {
+        await query(
+          `UPDATE syllabus_uploads 
             SET status = ?, parsed_data = ? 
             WHERE id = ?`,
-            [
-              "completed",
-              JSON.stringify(mockParsedData),
-              uploadId,
-            ]
-          );
-        } catch (dbError) {
-          console.error("Database update error:", dbError);
-        }
+          ["completed", JSON.stringify(parsedData), uploadId]
+        );
+      } catch (dbError) {
+        console.error("Database update error:", dbError);
       }
-
-      return NextResponse.json({
-        success: true,
-        parsedData: mockParsedData,
-        uploadId: uploadId || null,
-      });
-    } else {
-      // Update database status on failure
-      if (uploadId) {
-        try {
-          await query(
-            `UPDATE syllabus_uploads 
-            SET status = ?, error_message = ? 
-            WHERE id = ?`,
-            [
-              "failed",
-              "Failed to extract data from syllabus. Please try manual entry.",
-              uploadId,
-            ]
-          );
-        } catch (dbError) {
-          console.error("Database update error:", dbError);
-        }
-      }
-
-      return NextResponse.json({
-        success: false,
-        error: "Failed to extract data from syllabus. Please try manual entry.",
-      });
     }
+
+    await cleanupUploadedFile();
+    return NextResponse.json({
+      success: true,
+      parsedData,
+      uploadId: uploadId || null,
+    });
   } catch (error) {
     console.error("Parse error:", error);
+    if (filePath) {
+      try {
+        await unlink(filePath);
+      } catch (cleanupError) {
+        // ignore cleanup errors in catch
+      }
+    }
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to parse syllabus",
+        error:
+          error instanceof Error ? error.message : "Failed to parse syllabus",
       },
       { status: 500 }
     );
@@ -187,9 +165,6 @@ export async function POST(request: NextRequest) {
 // PATCH endpoint to update upload with course ID
 export async function PATCH(request: NextRequest) {
   try {
-    // Require authentication
-    const session = await requireAuth();
-
     const body: UpdateUploadRequest = await request.json();
     const { uploadId, courseId } = body;
 

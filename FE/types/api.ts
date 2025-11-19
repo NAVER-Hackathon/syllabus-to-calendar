@@ -19,9 +19,12 @@ export interface UploadResponse {
   status: "uploaded" | "processing" | "failed";
 }
 
+import { ParsedSyllabus } from "./syllabus";
+
 export interface ParseResponse {
   success: boolean;
-  parsedData?: any;
+  parsedData?: ParsedSyllabus;
   error?: string;
+  uploadId?: string;
 }
 
