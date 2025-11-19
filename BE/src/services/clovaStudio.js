@@ -25,7 +25,7 @@ async function processWithAI(ocrText, systemPrompt, userPrompt) {
         "Content-Type": "application/json",
         Accept: "application/json"
       },
-      timeout: 30000
+      timeout: 60000
     }
   );
 

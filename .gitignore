@@ -1,7 +1,11 @@
 # Dependencies
 node_modules/
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# Logs
+# Logs & debug
 logs
 *.log
 npm-debug.log*
@@ -14,13 +18,17 @@ pids
 *.seed
 *.pid.lock
 
-# Coverage directory
+# Coverage
 coverage/
 .nyc_output/
+/coverage
 
-# Build output
+# Build / production output
 dist/
 build/
+/build
+/.next/
+/out/
 
 # IDE
 .vscode/
@@ -29,16 +37,32 @@ build/
 *.swo
 *~
 
-# OS
+# OS / misc
 .DS_Store
 Thumbs.db
+*.pem
 
-# Optional npm cache directory
+# npm cache
 .npm
 
-# Optional eslint cache
+# eslint cache
 .eslintcache
 
 # Temporary files
 tmp/
 temp/
+
+# Local env files
+.env
+.env*.local
+
+# Deployment artifacts
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploads
+/uploads
+uploads/

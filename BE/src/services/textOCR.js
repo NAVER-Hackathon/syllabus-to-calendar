@@ -27,7 +27,7 @@ async function processOCR(filePath, originalName) {
       "X-OCR-SECRET": SECRET_KEY_OCR,
       ...formData.getHeaders()
     },
-    timeout: 30000
+    timeout: 60000
   });
 
   return response.data;
