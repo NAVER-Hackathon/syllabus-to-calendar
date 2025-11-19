@@ -14,6 +14,7 @@ interface FileDropzoneProps {
   acceptedFiles?: File[];
   maxFiles?: number;
   className?: string;
+  showFileList?: boolean;
 }
 
 export function FileDropzone({
@@ -21,6 +22,7 @@ export function FileDropzone({
   acceptedFiles = [],
   maxFiles,
   className,
+  showFileList = true,
 }: FileDropzoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -143,7 +145,7 @@ export function FileDropzone({
         </div>
       )}
 
-      {acceptedFiles.length > 0 && (
+      {showFileList && acceptedFiles.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-sm font-medium">Selected files ({acceptedFiles.length}):</p>
           <div className="space-y-2">

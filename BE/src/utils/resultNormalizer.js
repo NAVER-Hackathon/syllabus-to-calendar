@@ -8,6 +8,16 @@ const ensureString = (value, fallback) => {
   return fallback;
 };
 
+const ensureNullableString = (value) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length > 0 && trimmed.toLowerCase() !== "n/a") {
+      return trimmed;
+    }
+  }
+  return null;
+};
+
 const normalizeDateInput = (value) => {
   let str = value.trim();
   if (!str.includes("T")) {
@@ -33,15 +43,20 @@ const normalizeDateInput = (value) => {
   return `${datePart}T${timeSegments.join(":")}${zone}`;
 };
 
-const toIsoOrThrow = (value, index) => {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`Event #${index + 1} is missing a dueDate value`);
+const toIsoOrNull = (value) => {
+  if (typeof value !== "string") {
+    return null;
   }
 
-  const normalizedInput = normalizeDateInput(value);
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === "n/a") {
+    return null;
+  }
+
+  const normalizedInput = normalizeDateInput(trimmed);
   const date = new Date(normalizedInput);
   if (Number.isNaN(date.getTime())) {
-    throw new Error(`Event #${index + 1} has an invalid dueDate: ${value}`);
+    return null;
   }
   return date.toISOString();
 };
@@ -59,7 +74,7 @@ const normalizeEvents = (events) => {
     return {
       type: VALID_EVENT_TYPES.has(event.type) ? event.type : "assignment",
       title: ensureString(event.title, `Untitled Event ${index + 1}`),
-      dueDate: toIsoOrThrow(event.dueDate, index),
+      dueDate: toIsoOrNull(event.dueDate),
       description: ensureString(event.description, ""),
     };
   });
@@ -95,6 +110,9 @@ function normalizeSyllabusResult(raw) {
 
   const normalizedData = {
     courseName: ensureString(data.courseName, DEFAULT_COURSE_NAME),
+    instructor: ensureNullableString(data.instructor),
+    startDate: toIsoOrNull(data.startDate),
+    endDate: toIsoOrNull(data.endDate),
     events: normalizeEvents(data.events),
   };
 

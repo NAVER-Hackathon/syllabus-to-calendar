@@ -1,111 +1,146 @@
 const axios = require("axios");
 const crypto = require("crypto");
+const { jsonrepair } = require("jsonrepair");
 
 async function processWithAI(ocrText, systemPrompt, userPrompt) {
   const { CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_URL } = process.env;
   
-  const response = await axios.post(
-    CLOVA_STUDIO_URL,
-    {
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0,
-      topP: 0.1,
-      topK: 1,
-      repeatPenalty: 1.0,
-      includeAiFilters: false,
-      stopBefore: ["\n\n\n"],
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${CLOVA_STUDIO_API_KEY}`,
-        "X-NCP-CLOVASTUDIO-REQUEST-ID": crypto.randomBytes(16).toString("hex"),
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      timeout: 60000
-    }
-  );
+  const requestBody = {
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.01,
+    topP: 0.1,
+    topK: 1,
+    repeatPenalty: 1.0,
+    includeAiFilters: false,
+    stopBefore: ["```json", "```"]
+  };
 
-  return response.data.result.message.content
-    .replace(/```(?:json)?\n?/g, '')
-    .replace(/```\n?/g, '')
-    .trim();
+  try {
+    const response = await axios.post(
+      CLOVA_STUDIO_URL,
+      requestBody,
+      {
+        headers: {
+          Authorization: `Bearer ${CLOVA_STUDIO_API_KEY}`,
+          "X-NCP-CLOVASTUDIO-REQUEST-ID": crypto.randomBytes(16).toString("hex"),
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        timeout: 60000
+      }
+    );
+
+    return response.data.result.message.content
+      .replace(/```(?:json)?\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+  } catch (error) {
+    console.error("Clova Studio API Error:");
+    if (error.response) {
+      console.error("- Status:", error.response.status);
+      console.error("- Data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error("- Message:", error.message);
+    }
+    throw error;
+  }
 }
 
 async function extractSyllabusData(ocrText) {
-  const systemPrompt = `You are a precise syllabus data extractor. Output only valid JSON.
+  const systemPrompt = `You are a pure JSON generator. You parse OCR text into Syllabus JSON.
 
-CRITICAL RULES:
-- Return ONLY valid JSON, nothing else
-- No markdown, no explanations, no extra text before or after
-- All strings must use double quotes, not single quotes
-- No trailing commas in arrays or objects
-- Default year: 2025, timezone: .000Z
-- If no events found: {"success":false,"data":null}
+STRICT OUTPUT RULES:
+1. Output ONLY valid JSON. No markdown (occurrences of \`\`\`), no conversation, no introductory text.
+2. Default year: 2025.
+3. If data is missing/unclear, use null or "N/A".
+4. Do not include trailing commas.
+5. Always include course startDate and endDate fields (ISO8601). If unknown, set them to null.
+6. If instructor name exists, include it; otherwise set to null.
 
-OUTPUT FORMAT:
-{"success":true,"data":{"courseName":"N/A","events":[{"type":"assignment","title":"Title","dueDate":"2025-03-15T23:59:00.000Z","description":"Clean description"}]}}
+SCHEMA DEFINITION:
+{
+  "success": boolean,
+  "data": {
+    "courseName": string,
+    "instructor": string | null,
+    "startDate": "ISO8601 Date String or null",
+    "endDate": "ISO8601 Date String or null",
+    "events": [
+      {
+        "type": "assignment" | "exam",
+        "title": string,
+        "dueDate": "ISO8601 String (YYYY-MM-DDTHH:mm:ss.sssZ)",
+        "description": "Clean string max 300 chars"
+      }
+    ]
+  }
+}
 
-FIELD GUIDE:
+### EXAMPLE INPUT:
+Course: INTRO TO AI - CS50
+Homework 1: Neural Networks
+Submit by Oct 12 at 5pm.
+Note: Use Python only. Click here to submit.
 
-courseName:
-- Extract from header, remove codes: "Course Name - CS101" → "Course Name"
-- If not found → "N/A"
+### EXAMPLE OUTPUT:
+{
+  "success": true,
+  "data": {
+    "courseName": "INTRO TO AI",
+    "instructor": "Prof. Jane Doe",
+    "startDate": "2025-09-01T00:00:00.000Z",
+    "endDate": "2025-12-20T00:00:00.000Z",
+    "events": [
+      {
+        "type": "assignment",
+        "title": "Homework 1: Neural Networks",
+        "dueDate": "2025-10-12T17:00:00.000Z",
+        "description": "Use Python only."
+      }
+    ]
+  }
+}`;
 
-type:
-- "assignment": homework, project, lab, paper, essay, report
-- "exam": test, quiz, midterm, final, exam
-
-title:
-- Extract clean title: "Lab 5", "Assignment 2: Sorting"
-- Remove prefixes: "Upload Assignment:", "Submit:"
-
-dueDate:
-- ISO 8601 format
-- Assignments: 23:59 if no time specified
-- Exams: start time if available, else 09:00
-
-description:
-- Extract ONLY the meaningful content
-- Remove all UI elements: buttons, navigation, generic instructions
-- Remove: "Click Submit", "Save Draft", "Cancel", "Home Page", "When finished..."
-- Keep: file names, point values, important notes, submission requirements
-- Keep it concise, maximum 300 characters
-
-EXAMPLE WITH UI REMOVAL:
-
-OCR: "Upload Assignment: Lab 5 Due: March 20, 100 pts Click Submit When finished Save Draft"
-JSON: {"success":true,"data":{"courseName":"N/A","events":[{"type":"assignment","title":"Lab 5","dueDate":"2025-03-20T23:59:00.000Z","description":"Lab 5. 100 points."}]}}`;
-
-  const userPrompt = `Extract assignments and exams. Clean the description by removing UI text.
-
-OCR:
-${ocrText}`;
+  const userPrompt = `OCR TEXT TO PARSE:\n${ocrText}\n\nOutput JSON only.`;
 
   try {
     const rawResponse = await processWithAI(ocrText, systemPrompt, userPrompt);
-    
-    // Extract JSON efficiently
-    let jsonStr = rawResponse;
-    const firstBrace = jsonStr.indexOf('{');
-    const lastBrace = jsonStr.lastIndexOf('}');
-    
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+
+    let cleanString = rawResponse
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
+
+    const firstBrace = cleanString.indexOf("{");
+    const lastBrace = cleanString.lastIndexOf("}");
+
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error("No JSON object found in response");
     }
-    
-    const parsed = JSON.parse(jsonStr);
+
+    cleanString = cleanString.substring(firstBrace, lastBrace + 1);
+
+    const repaired = jsonrepair(cleanString);
+    const parsed = JSON.parse(repaired);
+
+    if (!parsed.data || !Array.isArray(parsed.data.events)) {
+      return JSON.stringify({ success: false, data: null, error: "Invalid Schema Structure" });
+    }
+
     return JSON.stringify(parsed);
     
-  } catch (parseError) {
-    console.error('JSON Parse Error:', parseError.message);
+  } catch (error) {
+    console.error('Extraction Error:', error.message);
+    if (error.response) {
+      console.error('API Response:', JSON.stringify(error.response.data, null, 2));
+    }
     return JSON.stringify({
       success: false,
       data: null,
-      error: 'Failed to parse AI response'
+      error: 'Failed to parse AI response or API Error'
     });
   }
 }

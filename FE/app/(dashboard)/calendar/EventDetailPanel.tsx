@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Tag, BookOpen, Inbox, Clock, MapPin } from 'lucide-react';
-import { EventApi } from '@fullcalendar/core';
+import { EventApi } from '@fullcalendar/core/index.js';
 
 interface EventDetailPanelProps {
     event: EventApi | null;

@@ -7,6 +7,7 @@ import { validateFile } from "@/lib/file-utils";
 import { query, queryOne } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { requireAuth } from "@/lib/session";
+import { resolveUserId } from "@/lib/user-resolver";
 
 // For development, we'll store files in a local uploads directory
 // In production, you'd want to use cloud storage (S3, etc.)
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
   try {
     // Require authentication
     const session = await requireAuth();
+    const userId = await resolveUserId(session);
 
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedFiles = [];
+    const shouldPersistUploads = !session.isMock;
 
     for (const file of files) {
       // Validate file
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             uploadId,
-            session.userId,
+            userId,
             fileName,
             file.name,
             filePath,
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
         );
       } catch (dbError) {
         console.error("Database error:", dbError);
-        // Continue even if DB save fails (for development)
+        // Continue even if DB save fails
       }
 
       uploadedFiles.push({
@@ -119,6 +122,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
+    const userId = await resolveUserId(session);
     const searchParams = request.nextUrl.searchParams;
     const uploadId = searchParams.get("uploadId");
     const fileId = searchParams.get("fileId");
@@ -127,7 +131,7 @@ export async function GET(request: NextRequest) {
       // Get upload record with parsed data
       const upload = await queryOne(
         `SELECT * FROM syllabus_uploads WHERE id = ? AND user_id = ?`,
-        [uploadId, session.userId]
+        [uploadId, userId]
       );
 
       if (!upload) {
@@ -137,10 +141,27 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      let parsedData = null;
+      if (upload.parsed_data) {
+        try {
+          parsedData =
+            typeof upload.parsed_data === "string"
+              ? JSON.parse(upload.parsed_data)
+              : upload.parsed_data;
+        } catch (error) {
+          console.warn(
+            "Failed to deserialize parsed_data payload for upload",
+            uploadId,
+            error
+          );
+          parsedData = null;
+        }
+      }
+
       return NextResponse.json({
         success: true,
         upload,
-        parsedData: upload.parsed_data ? JSON.parse(upload.parsed_data) : null,
+        parsedData,
       });
     }
 
