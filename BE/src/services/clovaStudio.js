@@ -4,7 +4,7 @@ const { jsonrepair } = require("jsonrepair");
 
 async function processWithAI(ocrText, systemPrompt, userPrompt) {
   const { CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_URL } = process.env;
-  
+
   const requestBody = {
     messages: [
       { role: "system", content: systemPrompt },
@@ -48,6 +48,93 @@ async function processWithAI(ocrText, systemPrompt, userPrompt) {
     throw error;
   }
 }
+
+
+// streaming handle
+async function streamAIResponse(res, systemPrompt, userPrompt) {
+  const { CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_URL } = process.env;
+
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await axios.post(
+        CLOVA_STUDIO_URL,
+        {
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.5,
+          stream: true
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${CLOVA_STUDIO_API_KEY}`,
+            "X-NCP-CLOVASTUDIO-REQUEST-ID": crypto.randomBytes(16).toString("hex"),
+            "Content-Type": "application/json",
+            Accept: "text/event-stream"
+          },
+          responseType: "stream"
+        }
+      );
+
+      let buffer = "";
+
+      response.data.on("data", (chunk) => {
+
+        buffer += chunk.toString();
+
+        let lines = buffer.split("\n");
+
+        buffer = lines.pop();
+
+        lines.forEach((line) => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) return;
+
+          if (trimmedLine.startsWith("data:")) {
+            const jsonStr = trimmedLine.replace("data:", "").trim();
+
+            if (jsonStr === "[DONE]") {
+              res.write("data: [DONE]\n\n");
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.message?.content || "";
+
+              if (content) {
+                process.stdout.write(content);
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            } catch (e) {
+
+            }
+          }
+        });
+      });
+
+      response.data.on("end", () => {
+
+        if (buffer.trim() !== "") {
+        }
+        res.end();
+        resolve();
+      });
+
+      response.data.on("error", (err) => {
+        console.error("Stream Error:", err);
+        reject(err);
+      });
+
+    } catch (error) {
+      console.error("Init Error:", error.message);
+      if (!res.headersSent) res.status(500).json({ error: error.message });
+      resolve();
+    }
+  });
+}
+
 
 async function extractSyllabusData(ocrText) {
   const systemPrompt = `You are a pure JSON generator. You parse OCR text into Syllabus JSON.
@@ -131,7 +218,7 @@ Note: Use Python only. Click here to submit.
     }
 
     return JSON.stringify(parsed);
-    
+
   } catch (error) {
     console.error('Extraction Error:', error.message);
     if (error.response) {
@@ -145,4 +232,4 @@ Note: Use Python only. Click here to submit.
   }
 }
 
-module.exports = { extractSyllabusData };
+module.exports = { extractSyllabusData, processWithAI, streamAIResponse, };

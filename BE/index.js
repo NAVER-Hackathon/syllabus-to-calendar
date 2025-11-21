@@ -5,6 +5,7 @@ const fs = require("fs");
 const { processOCRWithAI } = require("./src/services/textOCR");
 const { extractSyllabusData } = require("./src/services/clovaStudio");
 const { normalizeSyllabusResult } = require("./src/utils/resultNormalizer");
+const chatRoutes = require("./src/routes/chatRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -188,6 +189,8 @@ app.post("/process-syllabus", upload.single("image"), async (req, res) => {
     });
   }
 });
+
+app.use('/api/chat', chatRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
