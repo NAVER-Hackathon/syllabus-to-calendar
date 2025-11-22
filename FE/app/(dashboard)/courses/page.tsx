@@ -2,9 +2,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { requireAuth } from "@/lib/session";
+import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import { resolveUserId } from "@/lib/user-resolver";
+import { CourseCard } from "@/components/course/CourseCard";
+import { CourseFilter } from "@/components/course/CourseFilter";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -17,73 +20,110 @@ interface Course {
   start_date: Date;
   end_date: Date;
   color: string;
+  icon?: string;
   created_at: Date;
 }
 
 export default async function CoursesPage() {
-  const session = await requireAuth();
-  const userId = await resolveUserId(session);
+  // Layout handles authentication check, so we can safely get session here
+  // The layout will redirect if not authenticated, so if we reach here, we have a session
+  const sessionResult = await getSession();
+  
+  // Type guard - should never be null due to layout protection
+  if (!sessionResult.session) {
+    redirect('/login');
+    return; // TypeScript needs this
+  }
+  
+  const userId = await resolveUserId(sessionResult.session);
 
-  const courses = await query<Course>(
-    `SELECT id, name, code, term, instructor, start_date, end_date, color, created_at 
-     FROM courses 
-     WHERE user_id = ? 
-     ORDER BY created_at DESC`,
-    [userId]
-  );
+  // Fetch courses with error handling to prevent infinite re-renders
+  let courses: Course[] = [];
+  try {
+    courses = await query<Course>(
+      `SELECT id, name, code, term, instructor, start_date, end_date, color, icon, created_at 
+       FROM courses 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    // Return empty array instead of throwing to prevent infinite re-renders
+    courses = [];
+  }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">My Courses</h1>
-        <Link href="/courses/new">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Course
-          </Button>
-        </Link>
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Header Section */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500 mb-2">
+              Courses
+            </p>
+            <h1 className="text-3xl font-bold text-gray-900">Your syllabi hub</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {courses.length === 0
+                ? 'Upload a syllabus or add a course manually to start planning.'
+                : `Tracking ${courses.length} ${courses.length === 1 ? 'course' : 'courses'} across the term.`}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="border-dashed border-gray-300 text-gray-700" asChild>
+              <Link href="/courses/new">
+                <Plus className="w-4 h-4 mr-2" />
+                Upload syllabus
+              </Link>
+            </Button>
+            <Link href="/courses/new">
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Course
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Filter Section */}
+        {courses.length > 0 && (
+          <div className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Organize your view</p>
+                <p className="text-xs text-gray-500">
+                  Filter by term, instructor, or course status to focus your planning.
+                </p>
+              </div>
+              <CourseFilter />
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Content Section */}
       {courses.length === 0 ? (
-        <Card className="p-6">
-          <p className="text-gray-600 text-center py-8">
-            No courses yet.{" "}
-            <Link href="/courses/new" className="text-primary hover:underline">
-              Upload your first syllabus
+        <Card className="p-12 bg-gradient-to-br from-blue-50 via-white to-purple-50 border border-gray-200">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+              <Plus className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses yet</h3>
+            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
+              Get started by uploading your first course syllabus or creating a course manually.
+            </p>
+            <Link href="/courses/new">
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Course
+              </Button>
             </Link>
-          </p>
+          </div>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
           {courses.map((course) => (
-            <Link key={course.id} href={`/courses/${course.id}`}>
-              <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
-                <div className="flex items-start gap-3 mb-4">
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0 mt-1"
-                    style={{ backgroundColor: course.color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg truncate">{course.name}</h3>
-                    {course.code && (
-                      <p className="text-sm text-gray-500">{course.code}</p>
-                    )}
-                  </div>
-                </div>
-                {course.term && (
-                  <p className="text-sm text-gray-600 mb-2">{course.term}</p>
-                )}
-                {course.instructor && (
-                  <p className="text-sm text-gray-600">{course.instructor}</p>
-                )}
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs text-gray-500">
-                    {new Date(course.start_date).toLocaleDateString()} -{" "}
-                    {new Date(course.end_date).toLocaleDateString()}
-                  </p>
-                </div>
-              </Card>
-            </Link>
+            <CourseCard key={course.id} course={course} />
           ))}
         </div>
       )}

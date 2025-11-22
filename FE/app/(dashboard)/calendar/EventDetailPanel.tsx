@@ -2,16 +2,21 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Tag, BookOpen, Inbox, Clock, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Tag, BookOpen, Inbox, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { EventApi } from '@fullcalendar/core/index.js';
+import { cn } from '@/lib/utils';
 
 interface EventDetailPanelProps {
     event: EventApi | null;
+    className?: string;
+    variant?: 'compact' | 'expanded';
+    onExpand?: () => void;
 }
 
 export function formatEventDate(event: EventApi): string {
     if (event.allDay) {
-        return new Date(event.start || 0).toLocaleString('vi-VN', {
+        return new Date(event.start || 0).toLocaleString('en-US', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -22,19 +27,19 @@ export function formatEventDate(event: EventApi): string {
     const endDate = event.end ? new Date(event.end) : null;
 
     if (endDate) {
-        return `${startDate.toLocaleString('vi-VN', {
+        return `${startDate.toLocaleString('en-US', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-        })} - ${endDate.toLocaleString('vi-VN', {
+        })} - ${endDate.toLocaleString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
         })}`;
     }
 
-    return startDate.toLocaleString('vi-VN', {
+    return startDate.toLocaleString('en-US', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -68,18 +73,22 @@ function getEventTypeVariant(type: string): 'default' | 'secondary' | 'destructi
 
 
 
-export function EventDetailPanel({ event }: EventDetailPanelProps) {
+export function EventDetailPanel({ event, className, variant = 'compact', onExpand }: EventDetailPanelProps) {
     if (!event) {
         return (
-            <Card className="h-full">
-                <CardHeader>
-                    <CardTitle>Details</CardTitle>
+            <Card className={cn("h-full bg-white/70 border border-gray-200 shadow-sm", className)}>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold text-gray-900">Details</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col items-center justify-center text-center text-gray-400 h-64">
-                        <Inbox className="w-12 h-12 mb-4" />
-                        <p className="font-medium">No event selected</p>
-                        <p className="text-sm">Click an event on the calendar to see details.</p>
+                <CardContent className="h-full">
+                    <div className="flex flex-col items-center justify-center text-center text-gray-500 gap-3 h-full min-h-[260px]">
+                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                            <Inbox className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-gray-800">No event selected</p>
+                            <p className="text-sm">Select an event on the calendar to see its details.</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -88,12 +97,27 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
     const { type, courseName, location, description, courseStartDate, courseEndDate } = event.extendedProps;
     const backgroundColor = event.backgroundColor || '#3b82f6';
 
+    const isCompact = variant === 'compact';
+
     return (
-        <Card className="h-full">
-            <CardHeader>
-                <CardTitle>Details</CardTitle>
+        <Card className={cn("h-full bg-white/70 border border-gray-200 shadow-sm", className)}>
+            <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base font-semibold text-gray-900">Details</CardTitle>
+                    {isCompact && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-gray-500 gap-1"
+                            onClick={onExpand}
+                        >
+                            View full
+                            <ExternalLink className="w-3 h-3" />
+                        </Button>
+                    )}
+                </div>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid gap-5">
 
                 <div className="space-y-2">
                     <div className="flex items-start gap-2">
@@ -104,7 +128,7 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                         <h3 className="text-xl font-semibold leading-tight">{event.title}</h3>
                     </div>
                     {courseName && (
-                        <p className="text-base text-gray-500 ml-6">
+                        <p className="text-sm text-gray-500 ml-6 flex items-center gap-2">
                             <BookOpen className="w-4 h-4 inline mr-1" />
                             {courseName}
                         </p>
@@ -119,14 +143,14 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                             <div className="flex-1">
                                 <p className="text-sm font-medium">Course duration</p>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    <span className="font-medium">Start date:</span> {new Date(courseStartDate).toLocaleDateString('vi-VN', {
+                                    <span className="font-medium">Start date:</span> {new Date(courseStartDate).toLocaleDateString('en-US', {
                                         day: 'numeric',
                                         month: 'long',
                                         year: 'numeric'
                                     })}
                                 </p>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    <span className="font-medium">End date:</span> {new Date(courseEndDate).toLocaleDateString('vi-VN', {
+                                    <span className="font-medium">End date:</span> {new Date(courseEndDate).toLocaleDateString('en-US', {
                                         day: 'numeric',
                                         month: 'long',
                                         year: 'numeric'
@@ -175,10 +199,10 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
                                 <p className="font-medium">Repeat weekly</p>
                                 {event.start && event.end && (
                                     <p className="text-gray-500 text-xs mt-1">
-                                        {event.start.toLocaleString('vi-VN', {
+                                        {event.start.toLocaleString('en-US', {
                                             hour: '2-digit',
                                             minute: '2-digit'
-                                        })} - {event.end.toLocaleString('vi-VN', {
+                                        })} - {event.end.toLocaleString('en-US', {
                                             hour: '2-digit',
                                             minute: '2-digit'
                                         })}

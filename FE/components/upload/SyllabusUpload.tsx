@@ -633,364 +633,402 @@ export function SyllabusUpload() {
       )}
 
       <Dialog open={showUseDialog} onOpenChange={handleDialogToggle}>
-        <DialogContent className="max-h-[90vh] w-full max-w-3xl overflow-hidden">
+        <DialogContent className="max-h-[95vh] w-full max-w-7xl overflow-hidden flex flex-col h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Use parsed syllabus</DialogTitle>
+            <DialogTitle>Review and Correct Syllabus</DialogTitle>
             <DialogDescription>
-              Send this structured syllabus data to the course creator flow.
+              Compare the parsed data with your original document and make corrections.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 overflow-y-auto pr-1 text-sm" style={{ maxHeight: "65vh" }}>
-            <div>
-              <p className="font-medium">{selectedResult?.fileName}</p>
-              <p className="text-xs uppercase text-muted-foreground">
-                Status: {selectedResult?.status}
-              </p>
-            </div>
-            {selectedResult?.status === "error" && selectedResult?.message && (
-              <p className="text-destructive">{selectedResult.message}</p>
-            )}
-            {selectedResult?.status === "success" && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Details</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowDebug((prev) => !prev)}
-                  >
-                    {showDebug ? "Hide debug" : "Show debug"}
-                  </Button>
-                </div>
+          
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            {/* Left Column: Document Preview */}
+            <div className="hidden lg:flex flex-col border rounded-lg overflow-hidden bg-slate-100">
+              {(() => {
+                const file = files.find(
+                  (f) => f.name === selectedResult?.fileName
+                );
+                
+                if (!file) {
+                  return (
+                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                      <p>Preview not available (File may have been removed)</p>
+                    </div>
+                  );
+                }
 
-                {showDebug ? (
-                  <div className="rounded border bg-muted/40 p-3">
-                    <p className="mb-1 font-semibold">Debug payload</p>
-                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs">
-                      {JSON.stringify(selectedCourseData, null, 2)}
-                    </pre>
+                if (isPDF(file)) {
+                  return <PDFPreview file={file} className="h-full border-0 shadow-none" />;
+                }
+                
+                if (isImage(file)) {
+                  return <ImagePreview file={file} className="h-full border-0 shadow-none" />;
+                }
+
+                return (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    <p>Preview not supported for this file type</p>
                   </div>
-                ) : editableCourse ? (
-                  <div className="space-y-4 text-xs">
-                    <div className="rounded border bg-muted/40 p-3">
-                      <p className="font-semibold text-sm">Course overview</p>
-                      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <dt className="text-muted-foreground">Name</dt>
-                          <dd className="font-medium text-slate-900">
-                            <Input
-                              value={editableCourse.courseName || ""}
-                              onChange={(e) => handleCourseFieldChange("courseName", e.target.value)}
-                            />
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Instructor</dt>
-                          <dd className="font-medium text-slate-900">
-                            <Input
-                              value={editableCourse.instructor || ""}
-                              onChange={(e) => handleCourseFieldChange("instructor", e.target.value)}
-                            />
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Start date</dt>
-                          <dd className="font-medium text-slate-900">
-                            <Input
-                              type="date"
-                              value={editableCourse.startDate?.slice(0, 10) || ""}
-                              onChange={(e) =>
-                                handleCourseFieldChange("startDate", e.target.value)
-                              }
-                            />
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">End date</dt>
-                          <dd className="font-medium text-slate-900">
-                            <Input
-                              type="date"
-                              value={editableCourse.endDate?.slice(0, 10) || ""}
-                              onChange={(e) =>
-                                handleCourseFieldChange("endDate", e.target.value)
-                              }
-                            />
-                          </dd>
-                        </div>
-                      </dl>
+                );
+              })()}
+            </div>
+
+            {/* Right Column: Edit Form */}
+            <div className="overflow-y-auto pr-2">
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="font-medium">{selectedResult?.fileName}</p>
+                  <p className="text-xs uppercase text-muted-foreground">
+                    Status: {selectedResult?.status}
+                  </p>
+                </div>
+                {selectedResult?.status === "error" && selectedResult?.message && (
+                  <p className="text-destructive">{selectedResult.message}</p>
+                )}
+                {selectedResult?.status === "success" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Details</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDebug((prev) => !prev)}
+                      >
+                        {showDebug ? "Hide debug" : "Show debug"}
+                      </Button>
                     </div>
 
-                    {Array.isArray(editableCourse.assignments) && (
+                    {showDebug ? (
                       <div className="rounded border bg-muted/40 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-semibold text-sm">Assignments</p>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addListItem("assignments")}
-                            >
-                              Add assignment
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={`h-8 w-8 transition ${sectionVisibility.assignments ? "rotate-180" : ""}`}
-                              aria-label={
-                                sectionVisibility.assignments ? "Collapse assignments" : "Expand assignments"
-                              }
-                              aria-expanded={sectionVisibility.assignments}
-                              onClick={() => toggleSectionVisibility("assignments")}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {sectionVisibility.assignments && (
-                          <>
-                            {editableCourse.assignments.length > 0 ? (
-                              <div className="mt-2 space-y-3">
-                                {editableCourse.assignments.map((assignment, idx) => (
-                                  <div key={`assignment-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-semibold">Assignment {idx + 1}</p>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeListItem("assignments", idx)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                    <Input
-                                      placeholder="Title"
-                                      value={assignment.title || ""}
-                                      onChange={(e) => updateListItem("assignments", idx, "title", e.target.value)}
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <Input
-                                        type="date"
-                                        value={assignment.dueDateDate || ""}
-                                        onChange={(e) =>
-                                          updateListItem("assignments", idx, "dueDateDate", e.target.value)
-                                        }
-                                      />
-                                      <Input
-                                        type="time"
-                                        value={assignment.dueDateTime || ""}
-                                        onChange={(e) =>
-                                          updateListItem("assignments", idx, "dueDateTime", e.target.value)
-                                        }
-                                      />
-                                    </div>
-                                    <Textarea
-                                      placeholder="Description"
-                                      value={assignment.description || ""}
-                                      onChange={(e) => updateListItem("assignments", idx, "description", e.target.value)}
-                                      rows={2}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-2 text-xs text-muted-foreground">No assignments detected.</p>
-                            )}
-                          </>
-                        )}
+                        <p className="mb-1 font-semibold">Debug payload</p>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs">
+                          {JSON.stringify(selectedCourseData, null, 2)}
+                        </pre>
                       </div>
-                    )}
+                    ) : editableCourse ? (
+                      <div className="space-y-4 text-xs">
+                        <div className="rounded border bg-muted/40 p-3">
+                          <p className="font-semibold text-sm">Course overview</p>
+                          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <div>
+                              <dt className="text-muted-foreground">Name</dt>
+                              <dd className="font-medium text-slate-900">
+                                <Input
+                                  value={editableCourse.courseName || ""}
+                                  onChange={(e) => handleCourseFieldChange("courseName", e.target.value)}
+                                />
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">Instructor</dt>
+                              <dd className="font-medium text-slate-900">
+                                <Input
+                                  value={editableCourse.instructor || ""}
+                                  onChange={(e) => handleCourseFieldChange("instructor", e.target.value)}
+                                />
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">Start date</dt>
+                              <dd className="font-medium text-slate-900">
+                                <Input
+                                  type="date"
+                                  value={editableCourse.startDate?.slice(0, 10) || ""}
+                                  onChange={(e) =>
+                                    handleCourseFieldChange("startDate", e.target.value)
+                                  }
+                                />
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">End date</dt>
+                              <dd className="font-medium text-slate-900">
+                                <Input
+                                  type="date"
+                                  value={editableCourse.endDate?.slice(0, 10) || ""}
+                                  onChange={(e) =>
+                                    handleCourseFieldChange("endDate", e.target.value)
+                                  }
+                                />
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
 
-                    {Array.isArray(editableCourse.exams) && (
-                      <div className="rounded border bg-muted/40 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-semibold text-sm">Exams</p>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addListItem("exams")}
-                            >
-                              Add exam
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={`h-8 w-8 transition ${sectionVisibility.exams ? "rotate-180" : ""}`}
-                              aria-label={sectionVisibility.exams ? "Collapse exams" : "Expand exams"}
-                              aria-expanded={sectionVisibility.exams}
-                              onClick={() => toggleSectionVisibility("exams")}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {sectionVisibility.exams && (
-                          <>
-                            {editableCourse.exams.length > 0 ? (
-                              <div className="mt-2 space-y-3">
-                                {editableCourse.exams.map((exam, idx) => (
-                                  <div key={`exam-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-semibold">Exam {idx + 1}</p>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeListItem("exams", idx)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                    <Input
-                                      placeholder="Title"
-                                      value={exam.title || ""}
-                                      onChange={(e) => updateListItem("exams", idx, "title", e.target.value)}
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <Input
-                                        type="date"
-                                        value={exam.date || ""}
-                                        onChange={(e) => updateListItem("exams", idx, "date", e.target.value)}
-                                      />
-                                      <Input
-                                        type="time"
-                                        value={exam.time || ""}
-                                        onChange={(e) => updateListItem("exams", idx, "time", e.target.value)}
-                                      />
-                                    </div>
-                                    <Input
-                                      placeholder="Location"
-                                      value={exam.location || ""}
-                                      onChange={(e) => updateListItem("exams", idx, "location", e.target.value)}
-                                    />
-                                  </div>
-                                ))}
+                        {Array.isArray(editableCourse.assignments) && (
+                          <div className="rounded border bg-muted/40 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold text-sm">Assignments</p>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addListItem("assignments")}
+                                >
+                                  Add assignment
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 transition ${sectionVisibility.assignments ? "rotate-180" : ""}`}
+                                  aria-label={
+                                    sectionVisibility.assignments ? "Collapse assignments" : "Expand assignments"
+                                  }
+                                  aria-expanded={sectionVisibility.assignments}
+                                  onClick={() => toggleSectionVisibility("assignments")}
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
                               </div>
-                            ) : (
-                              <p className="mt-2 text-xs text-muted-foreground">No exams detected.</p>
+                            </div>
+                            {sectionVisibility.assignments && (
+                              <>
+                                {editableCourse.assignments.length > 0 ? (
+                                  <div className="mt-2 space-y-3">
+                                    {editableCourse.assignments.map((assignment, idx) => (
+                                      <div key={`assignment-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-sm font-semibold">Assignment {idx + 1}</p>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeListItem("assignments", idx)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                        <Input
+                                          placeholder="Title"
+                                          value={assignment.title || ""}
+                                          onChange={(e) => updateListItem("assignments", idx, "title", e.target.value)}
+                                        />
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <Input
+                                            type="date"
+                                            value={assignment.dueDateDate || ""}
+                                            onChange={(e) =>
+                                              updateListItem("assignments", idx, "dueDateDate", e.target.value)
+                                            }
+                                          />
+                                          <Input
+                                            type="time"
+                                            value={assignment.dueDateTime || ""}
+                                            onChange={(e) =>
+                                              updateListItem("assignments", idx, "dueDateTime", e.target.value)
+                                            }
+                                          />
+                                        </div>
+                                        <Textarea
+                                          placeholder="Description"
+                                          value={assignment.description || ""}
+                                          onChange={(e) => updateListItem("assignments", idx, "description", e.target.value)}
+                                          rows={2}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-xs text-muted-foreground">No assignments detected.</p>
+                                )}
+                              </>
                             )}
-                          </>
+                          </div>
                         )}
-                      </div>
-                    )}
 
-                    {Array.isArray(editableCourse.classSchedule) && (
-                      <div className="rounded border bg-muted/40 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-semibold text-sm">Class schedule</p>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addListItem("classSchedule")}
-                            >
-                              Add session
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={`h-8 w-8 transition ${sectionVisibility.classSchedule ? "rotate-180" : ""}`}
-                              aria-label={
-                                sectionVisibility.classSchedule ? "Collapse class schedule" : "Expand class schedule"
-                              }
-                              aria-expanded={sectionVisibility.classSchedule}
-                              onClick={() => toggleSectionVisibility("classSchedule")}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {sectionVisibility.classSchedule && (
-                          <>
-                            {editableCourse.classSchedule.length > 0 ? (
-                              <div className="mt-2 space-y-3">
-                                {editableCourse.classSchedule.map((session, idx) => (
-                                  <div key={`session-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-semibold">Session {idx + 1}</p>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeListItem("classSchedule", idx)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <Label className="text-[10px] uppercase text-muted-foreground">Day</Label>
-                                        <select
-                                          className="flex h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
-                                          value={session.dayOfWeek ?? 1}
-                                          onChange={(e) =>
-                                            updateListItem(
-                                              "classSchedule",
-                                              idx,
-                                              "dayOfWeek",
-                                              parseInt(e.target.value)
-                                            )
-                                          }
-                                        >
-                                          {dayNames.map((day, dayIdx) => (
-                                            <option key={day} value={dayIdx}>
-                                              {day}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase text-muted-foreground">Location</Label>
-                                        <Input
-                                          value={session.location || ""}
-                                          onChange={(e) =>
-                                            updateListItem("classSchedule", idx, "location", e.target.value)
-                                          }
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase text-muted-foreground">Start</Label>
-                                        <Input
-                                          type="time"
-                                          value={session.startTime || ""}
-                                          onChange={(e) =>
-                                            updateListItem("classSchedule", idx, "startTime", e.target.value)
-                                          }
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase text-muted-foreground">End</Label>
-                                        <Input
-                                          type="time"
-                                          value={session.endTime || ""}
-                                          onChange={(e) =>
-                                            updateListItem("classSchedule", idx, "endTime", e.target.value)
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                        {Array.isArray(editableCourse.exams) && (
+                          <div className="rounded border bg-muted/40 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold text-sm">Exams</p>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addListItem("exams")}
+                                >
+                                  Add exam
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 transition ${sectionVisibility.exams ? "rotate-180" : ""}`}
+                                  aria-label={sectionVisibility.exams ? "Collapse exams" : "Expand exams"}
+                                  aria-expanded={sectionVisibility.exams}
+                                  onClick={() => toggleSectionVisibility("exams")}
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
                               </div>
-                            ) : (
-                              <p className="mt-2 text-xs text-muted-foreground">No schedule detected.</p>
+                            </div>
+                            {sectionVisibility.exams && (
+                              <>
+                                {editableCourse.exams.length > 0 ? (
+                                  <div className="mt-2 space-y-3">
+                                    {editableCourse.exams.map((exam, idx) => (
+                                      <div key={`exam-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-sm font-semibold">Exam {idx + 1}</p>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeListItem("exams", idx)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                        <Input
+                                          placeholder="Title"
+                                          value={exam.title || ""}
+                                          onChange={(e) => updateListItem("exams", idx, "title", e.target.value)}
+                                        />
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <Input
+                                            type="date"
+                                            value={exam.date || ""}
+                                            onChange={(e) => updateListItem("exams", idx, "date", e.target.value)}
+                                          />
+                                          <Input
+                                            type="time"
+                                            value={exam.time || ""}
+                                            onChange={(e) => updateListItem("exams", idx, "time", e.target.value)}
+                                          />
+                                        </div>
+                                        <Input
+                                          placeholder="Location"
+                                          value={exam.location || ""}
+                                          onChange={(e) => updateListItem("exams", idx, "location", e.target.value)}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-xs text-muted-foreground">No exams detected.</p>
+                                )}
+                              </>
                             )}
-                          </>
+                          </div>
+                        )}
+
+                        {Array.isArray(editableCourse.classSchedule) && (
+                          <div className="rounded border bg-muted/40 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold text-sm">Class schedule</p>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addListItem("classSchedule")}
+                                >
+                                  Add session
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 transition ${sectionVisibility.classSchedule ? "rotate-180" : ""}`}
+                                  aria-label={
+                                    sectionVisibility.classSchedule ? "Collapse class schedule" : "Expand class schedule"
+                                  }
+                                  aria-expanded={sectionVisibility.classSchedule}
+                                  onClick={() => toggleSectionVisibility("classSchedule")}
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            {sectionVisibility.classSchedule && (
+                              <>
+                                {editableCourse.classSchedule.length > 0 ? (
+                                  <div className="mt-2 space-y-3">
+                                    {editableCourse.classSchedule.map((session, idx) => (
+                                      <div key={`session-${idx}`} className="space-y-2 rounded bg-white/60 p-3">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-sm font-semibold">Session {idx + 1}</p>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeListItem("classSchedule", idx)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Day</Label>
+                                            <select
+                                              className="flex h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+                                              value={session.dayOfWeek ?? 1}
+                                              onChange={(e) =>
+                                                updateListItem(
+                                                  "classSchedule",
+                                                  idx,
+                                                  "dayOfWeek",
+                                                  parseInt(e.target.value)
+                                                )
+                                              }
+                                            >
+                                              {dayNames.map((day, dayIdx) => (
+                                                <option key={day} value={dayIdx}>
+                                                  {day}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Location</Label>
+                                            <Input
+                                              value={session.location || ""}
+                                              onChange={(e) =>
+                                                updateListItem("classSchedule", idx, "location", e.target.value)
+                                              }
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Start</Label>
+                                            <Input
+                                              type="time"
+                                              value={session.startTime || ""}
+                                              onChange={(e) =>
+                                                updateListItem("classSchedule", idx, "startTime", e.target.value)
+                                              }
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label className="text-[10px] uppercase text-muted-foreground">End</Label>
+                                            <Input
+                                              type="time"
+                                              value={session.endTime || ""}
+                                              onChange={(e) =>
+                                                updateListItem("classSchedule", idx, "endTime", e.target.value)
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-xs text-muted-foreground">No schedule detected.</p>
+                                )}
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No structured data returned.</p>
                     )}
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">No structured data returned.</p>
                 )}
               </div>
-            )}
+            </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button variant="ghost" onClick={() => setShowUseDialog(false)}>
               Close
             </Button>
@@ -1009,7 +1047,7 @@ export function SyllabusUpload() {
           </DialogFooter>
           {createStatus && (
             <p
-              className={`text-sm ${
+              className={`text-sm text-center ${
                 createStatus.type === "success" ? "text-emerald-600" : "text-destructive"
               }`}
             >

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getDatabaseConfig } from "@/lib/env";
 
 /**
  * Test database connection and show tables
@@ -10,9 +11,10 @@ export async function GET() {
     const [testResult] = await query("SELECT 1 as test, NOW() as current_time, DATABASE() as database_name");
     
     // Get list of tables
+    const dbConfig = getDatabaseConfig();
     const tables = await query(
       "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?",
-      [process.env.DB_NAME || "hackathondb"]
+      [dbConfig.database]
     );
     
     // Get table counts
@@ -32,7 +34,7 @@ export async function GET() {
       connection: testResult,
       tables: tables.map((t: any) => t.TABLE_NAME),
       tableCounts,
-      database: process.env.DB_NAME || "hackathondb",
+      database: dbConfig.database,
     });
   } catch (error) {
     console.error("Database test error:", error);

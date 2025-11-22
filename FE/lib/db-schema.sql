@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS courses (
   start_date DATE,
   end_date DATE,
   color VARCHAR(7) DEFAULT '#3b82f6',
+  icon VARCHAR(50) DEFAULT 'Calendar',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -41,12 +42,14 @@ CREATE TABLE IF NOT EXISTS assignments (
   status ENUM('pending', 'in-progress', 'completed') DEFAULT 'pending',
   priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
   estimated_hours INT,
+  completed_at TIMESTAMP NULL COMMENT 'Timestamp when assignment was marked as completed',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   INDEX idx_course_id (course_id),
   INDEX idx_due_date (due_date),
-  INDEX idx_status (status)
+  INDEX idx_status (status),
+  INDEX idx_completed_at (completed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Exams table
@@ -158,5 +161,18 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   INDEX idx_course_id (course_id),
   INDEX idx_start_date (start_date),
   INDEX idx_google_event_id (google_event_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- User statistics table for tracking streaks and other user metrics
+CREATE TABLE IF NOT EXISTS user_stats (
+  user_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
+  best_streak INT DEFAULT 0 COMMENT 'Highest streak ever achieved',
+  current_streak INT DEFAULT 0 COMMENT 'Current active streak',
+  last_streak_date DATE COMMENT 'Last date that contributed to the streak',
+  last_streak_update DATE COMMENT 'Last date when streak was calculated',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

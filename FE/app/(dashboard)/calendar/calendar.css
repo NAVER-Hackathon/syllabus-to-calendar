@@ -102,6 +102,11 @@
     padding: 2px 4px;
 }
 
+.fc .fc-daygrid-more-link.fc-more-link-custom {
+    color: #2563eb;
+    font-weight: 600;
+}
+
 .fc .fc-daygrid-more-link:hover {
     background-color: #f1f5f9;
     border-radius: 4px;

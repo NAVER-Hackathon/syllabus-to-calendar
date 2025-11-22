@@ -11,9 +11,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2, Plus, X } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/date-utils";
 import { ParsedSyllabus } from "@/types/syllabus";
+import { IconPicker } from "./IconPicker";
+import { COURSE_COLORS } from "@/constants/config";
 
 interface CourseCreationFormProps {
-  parsedData?: ParsedSyllabus;
+  parsedData?: ParsedSyllabus | null;
   uploadId?: string;
 }
 
@@ -32,6 +34,7 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
   const [endDate, setEndDate] = useState(
     parsedData?.endDate ? formatDate(new Date(parsedData.endDate)) : ""
   );
+  const [selectedIcon, setSelectedIcon] = useState("Calendar");
 
   // Assignments - pre-fill from parsed data
   const [assignments, setAssignments] = useState(
@@ -130,6 +133,7 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
           instructor,
           startDate: startDate || null,
           endDate: endDate || null,
+          icon: selectedIcon,
           assignments: assignments.filter((a) => a.title.trim() && a.dueDate),
           exams: exams.filter((e) => e.title.trim() && e.date),
           classSchedule: classSchedules.filter(
@@ -258,6 +262,14 @@ export function CourseCreationForm({ parsedData, uploadId }: CourseCreationFormP
               disabled={loading}
             />
           </div>
+        </div>
+        <div className="mt-4">
+          <Label>Course Icon (Optional)</Label>
+          <IconPicker
+            selectedIcon={selectedIcon}
+            onIconSelect={setSelectedIcon}
+            courseColor={COURSE_COLORS[Math.floor(Math.random() * COURSE_COLORS.length)]}
+          />
         </div>
       </Card>
 

@@ -1,26 +1,32 @@
 import mysql from "mysql2/promise";
+import { getDatabaseConfig } from "./env";
 
 // Database connection configuration
-// Use environment variables for security
-const dbConfig: mysql.PoolOptions = {
-  host: process.env.DB_HOST || "db-3c34ls-kr.vpc-pub-cdb.ntruss.com",
-  user: process.env.DB_USER || "dbadmin",
-  password: process.env.DB_PASSWORD || "Hackathon@2025",
-  database: process.env.DB_NAME || "hackathondb",
-  port: parseInt(process.env.DB_PORT || "3306"),
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-};
+// All credentials must be provided via environment variables
+let dbConfig: mysql.PoolOptions | null = null;
+
+function getDbConfig(): mysql.PoolOptions {
+  if (!dbConfig) {
+    const config = getDatabaseConfig();
+    dbConfig = {
+      ...config,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    };
+  }
+  return dbConfig;
+}
 
 // Create connection pool
 let pool: mysql.Pool | null = null;
 
 export function getPool(): mysql.Pool {
   if (!pool) {
-    pool = mysql.createPool(dbConfig);
+    const config = getDbConfig();
+    pool = mysql.createPool(config);
   }
   return pool;
 }

@@ -176,75 +176,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("SSE proxy error:", error);
 
-    if (process.env.NODE_ENV !== "production") {
-      const encoder = new TextEncoder();
-      const upcomingWednesday = () => {
-        const date = new Date();
-        const day = date.getDay();
-        const diff = (3 - day + 7) % 7 || 7; // Wednesday = 3
-        date.setDate(date.getDate() + diff);
-        date.setHours(23, 59, 0, 0);
-        return date.toISOString();
-      };
-
-      const mockEvents = [
-        { type: "progress", step: 1, message: "Uploading to CLOVA OCR..." },
-        { type: "progress", step: 2, message: "Extracting assignments..." },
-        { type: "progress", step: 3, message: "Building calendar events..." },
-        {
-          type: "result",
-          payload: {
-            success: true,
-            data: {
-              courseName: "CS101 - Intro to AI",
-              events: [
-                {
-                  type: "assignment",
-                  title: "Lab 1: Linear Regression",
-                  dueDate: upcomingWednesday(),
-                  description: "Submit Jupyter notebook + short report (20 pts).",
-                },
-                {
-                  type: "assignment",
-                  title: "Project Proposal",
-                  dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
-                  description: "2-page PDF outlining team project idea (30 pts).",
-                },
-                {
-                  type: "exam",
-                  title: "Midterm Exam",
-                  dueDate: new Date(Date.now() + 28 * 86400000).toISOString(),
-                  description: "Chapters 1-6, closed-book, 10:00 AM start.",
-                },
-              ],
-            },
-          },
-        },
-      ];
-
-      const stream = new ReadableStream({
-        start(controller) {
-          mockEvents.forEach((event, index) => {
-            setTimeout(() => {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
-              );
-              if (index === mockEvents.length - 1) {
-                controller.close();
-              }
-            }, 400 * (index + 1));
-          });
-        },
-      });
-
-      return new Response(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-        },
-      });
-    }
+    // Update upload status if uploadId is provided
+    // Update upload status if we have the body parsed
+    // Note: We can't easily access uploadId here if JSON parsing failed
+    // so we log the error and return 500
+    console.error("Stream processing failed");
 
     return new Response(
       JSON.stringify({

@@ -1,56 +1,75 @@
 import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "your-secret-key-here-change-in-production"
-);
-
-const isDev = process.env.NODE_ENV !== "production";
-const MOCK_USER = {
-  userId: "demo-user",
-  email: "demo@example.com",
-} as const;
+import { jwtVerify, JWTPayload } from "jose";
+import { getJwtSecret } from "./env";
 
 export interface SessionUser {
   userId: string;
   email: string;
-  isMock?: boolean;
+}
+
+export interface SessionResult {
+  session: SessionUser | null;
+  expired: boolean;
+}
+
+/**
+ * Check if JWT error indicates expired token
+ */
+function isExpiredTokenError(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWT_CLAIM_VALIDATION_FAILED';
+  }
+  return false;
 }
 
 /**
  * Get current user from session
+ * Returns session result with expired flag to distinguish expired vs missing tokens
  */
-export async function getSession(): Promise<SessionUser | null> {
+export async function getSession(): Promise<SessionResult> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth-token")?.value;
 
     if (!token) {
-      return isDev ? { ...MOCK_USER, isMock: true } : null;
+      return { session: null, expired: false };
     }
 
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const jwtSecret = getJwtSecret();
+    const { payload } = await jwtVerify(token, jwtSecret);
 
     return {
-      userId: payload.userId as string,
-      email: payload.email as string,
-      isMock: false,
+      session: {
+        userId: payload.userId as string,
+        email: payload.email as string,
+      },
+      expired: false,
     };
   } catch (error) {
-    return isDev ? { ...MOCK_USER, isMock: true } : null;
+    // Check if token is expired vs invalid
+    const expired = isExpiredTokenError(error);
+    return { session: null, expired };
   }
+}
+
+/**
+ * Check if session is expired (helper function for backward compatibility)
+ */
+export async function isSessionExpired(): Promise<boolean> {
+  const result = await getSession();
+  return result.expired;
 }
 
 /**
  * Require authentication (throws if not authenticated)
  */
 export async function requireAuth(): Promise<SessionUser> {
-  const session = await getSession();
+  const sessionResult = await getSession();
 
-  if (!session) {
+  if (!sessionResult.session) {
     throw new Error("Unauthorized");
   }
 
-  return session;
+  return sessionResult.session;
 }
 

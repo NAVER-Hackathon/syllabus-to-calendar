@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedFiles = [];
-    const shouldPersistUploads = !session.isMock;
 
     for (const file of files) {
       // Validate file

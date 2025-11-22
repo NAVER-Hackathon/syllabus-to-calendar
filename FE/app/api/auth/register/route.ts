@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser, findUserByEmail } from "@/lib/auth";
 import { z } from "zod";
+import {
+  rateLimit,
+  createRateLimitResponse,
+  getRateLimitConfig,
+} from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -13,12 +18,29 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
 
+    // Apply rate limiting (moderate: 10 attempts per 15 minutes per IP)
+    const rateLimitConfig = getRateLimitConfig('MODERATE');
+    const rateLimitResult = await rateLimit(request, rateLimitConfig);
+
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult);
+    }
+
     // Check if user already exists
+    // Use same error message as login to prevent account enumeration
     const existingUser = await findUserByEmail(validatedData.email);
     if (existingUser) {
+      // Generic error message - same as login to prevent account enumeration
       return NextResponse.json(
-        { error: "User with this email already exists" },
-        { status: 400 }
+        { error: "Invalid email or password" },
+        { 
+          status: 401, // Use 401 to match login error status
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          },
+        }
       );
     }
 
@@ -29,7 +51,7 @@ export async function POST(request: NextRequest) {
       validatedData.name
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -37,6 +59,13 @@ export async function POST(request: NextRequest) {
         name: user.name,
       },
     });
+
+    // Add rate limit headers to successful response
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

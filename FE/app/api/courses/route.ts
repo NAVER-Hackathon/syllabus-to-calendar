@@ -11,6 +11,7 @@ interface CreateCourseRequest {
   instructor?: string;
   startDate?: string | null;
   endDate?: string | null;
+  icon?: string;
   assignments?: Array<{
     title: string;
     dueDate: string;
@@ -50,12 +51,13 @@ export async function POST(request: NextRequest) {
     const courseId = randomUUID();
     const colorIndex = Math.floor(Math.random() * COURSE_COLORS.length);
     const color = COURSE_COLORS[colorIndex];
+    const icon = body.icon || 'Calendar';
 
     // Create course in DB
     await query(
       `INSERT INTO courses 
-      (id, user_id, name, instructor, start_date, end_date, color) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      (id, user_id, name, instructor, start_date, end_date, color, icon) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         courseId,
         userId,
@@ -64,6 +66,7 @@ export async function POST(request: NextRequest) {
         startDate,
         endDate,
         color,
+        icon,
       ]
     );
 
@@ -143,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Get created course
     const course = await queryOne(
-      `SELECT id, name, instructor, start_date, end_date, color, created_at, updated_at 
+      `SELECT id, name, instructor, start_date, end_date, color, icon, created_at, updated_at 
        FROM courses WHERE id = ?`,
       [courseId]
     );
@@ -170,7 +173,7 @@ export async function GET(request: NextRequest) {
     const userId = await resolveUserId(session);
 
     const courses = await query(
-      `SELECT id, name, code, term, instructor, start_date, end_date, color, created_at, updated_at 
+      `SELECT id, name, code, term, instructor, start_date, end_date, color, icon, created_at, updated_at 
        FROM courses 
        WHERE user_id = ? 
        ORDER BY created_at DESC`,

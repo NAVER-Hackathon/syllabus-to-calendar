@@ -47,7 +47,15 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Registration failed");
+        // Provide more helpful error messages
+        if (response.status === 500) {
+          setError(
+            "Server configuration error. Please check that database environment variables are set. " +
+            "See docs/environment-setup.md for setup instructions."
+          );
+        } else {
+          setError(data.error || "Registration failed");
+        }
         setLoading(false);
         return;
       }

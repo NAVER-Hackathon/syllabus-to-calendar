@@ -7,6 +7,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { getPool } from "../lib/db";
+import { getDatabaseConfig } from "../lib/env";
 
 async function initDatabase() {
   try {
@@ -93,8 +94,9 @@ async function initDatabase() {
     console.log("✅ Database initialization completed successfully!");
     
     // Test connection
+    const dbConfig = getDatabaseConfig();
     const [result] = await pool.execute("SELECT COUNT(*) as table_count FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?", [
-      process.env.DB_NAME || "hackathondb"
+      dbConfig.database
     ]);
     
     console.log(`📊 Database contains ${(result as any)[0].table_count} tables`);

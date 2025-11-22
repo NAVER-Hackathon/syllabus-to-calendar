@@ -71,7 +71,7 @@ function CreateCourseContent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 max-w-4xl">
+      <div className="p-6 max-w-4xl">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
@@ -80,9 +80,9 @@ function CreateCourseContent() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Create Course</h1>
+        <h1 className="text-2xl font-bold mb-2 text-gray-900">Create Course</h1>
         <p className="text-gray-600">
           {parsedData
             ? "Review and edit the extracted course information."
@@ -97,7 +97,7 @@ function CreateCourseContent() {
 export default function CreateCoursePage() {
   return (
     <Suspense fallback={
-      <div className="container mx-auto py-8 max-w-4xl">
+      <div className="p-6 max-w-4xl">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>

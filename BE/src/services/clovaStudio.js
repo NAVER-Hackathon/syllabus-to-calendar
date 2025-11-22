@@ -63,7 +63,8 @@ async function streamAIResponse(res, systemPrompt, userPrompt) {
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
           ],
-          temperature: 0.5,
+          temperature: 0.3,
+          max_tokens: 500,
           stream: true
         },
         {
@@ -78,8 +79,11 @@ async function streamAIResponse(res, systemPrompt, userPrompt) {
       );
 
       let buffer = "";
+      let fullContent = ""; // Track all content sent
+      let stopped = false; // Flag to stop processing
 
       response.data.on("data", (chunk) => {
+        if (stopped) return; // Don't process if we've already stopped
 
         buffer += chunk.toString();
 
@@ -88,6 +92,8 @@ async function streamAIResponse(res, systemPrompt, userPrompt) {
         buffer = lines.pop();
 
         lines.forEach((line) => {
+          if (stopped) return;
+          
           const trimmedLine = line.trim();
           if (!trimmedLine) return;
 
@@ -103,12 +109,46 @@ async function streamAIResponse(res, systemPrompt, userPrompt) {
               const parsed = JSON.parse(jsonStr);
               const content = parsed.message?.content || "";
 
-              if (content) {
+              if (content && !stopped) {
+                const newFullContent = fullContent + content;
+                
+                // AGGRESSIVE DUPLICATE DETECTION - Multiple strategies
+                if (fullContent.length > 50) {
+                  // Strategy 1: Check if the beginning appears again
+                  const beginning = fullContent.substring(0, Math.min(100, fullContent.length));
+                  const secondOccurrence = newFullContent.indexOf(beginning, beginning.length);
+                  
+                  if (secondOccurrence > 0) {
+                    console.log('[HARD STOP] Strategy 1: Detected duplicate content at position:', secondOccurrence);
+                    console.log('[HARD STOP] Beginning text:', beginning.substring(0, 50) + '...');
+                    stopped = true;
+                    res.write("data: [DONE]\n\n");
+                    res.end();
+                    return;
+                  }
+                  
+                  // Strategy 2: Check if we're repeating the last 50% of content
+                  if (fullContent.length > 100) {
+                    const halfLength = Math.floor(fullContent.length / 2);
+                    const secondHalf = fullContent.substring(halfLength);
+                    
+                    // Check if this second half appears in the new content
+                    if (newFullContent.substring(fullContent.length).includes(secondHalf.substring(0, 50))) {
+                      console.log('[HARD STOP] Strategy 2: Detected repeating pattern');
+                      stopped = true;
+                      res.write("data: [DONE]\n\n");
+                      res.end();
+                      return;
+                    }
+                  }
+                }
+                
+                fullContent = newFullContent;
                 process.stdout.write(content);
                 res.write(`data: ${JSON.stringify({ content })}\n\n`);
               }
             } catch (e) {
-
+              // Silent fail on parse errors
             }
           }
         });

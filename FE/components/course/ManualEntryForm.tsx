@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Plus, X, AlertCircle } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/date-utils";
+import { IconPicker } from "./IconPicker";
+import { COURSE_COLORS } from "@/constants/config";
 
 interface Assignment {
   title: string;
@@ -41,6 +43,7 @@ export function ManualEntryForm() {
   const [instructor, setInstructor] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState("Calendar");
 
   // Assignments
   const [assignments, setAssignments] = useState<Assignment[]>([
@@ -135,6 +138,7 @@ export function ManualEntryForm() {
           instructor,
           startDate,
           endDate,
+          icon: selectedIcon,
           assignments: assignments.filter((a) => a.title.trim() && a.dueDate),
           exams: exams.filter((e) => e.title.trim() && e.date),
           classSchedule: classSchedules.filter(
@@ -232,6 +236,14 @@ export function ManualEntryForm() {
               disabled={loading}
             />
           </div>
+        </div>
+        <div className="mt-4">
+          <Label>Course Icon (Optional)</Label>
+          <IconPicker
+            selectedIcon={selectedIcon}
+            onIconSelect={setSelectedIcon}
+            courseColor={COURSE_COLORS[Math.floor(Math.random() * COURSE_COLORS.length)]}
+          />
         </div>
       </Card>
 
