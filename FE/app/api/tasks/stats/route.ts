@@ -154,10 +154,18 @@ function calculateStreak(
   // Calculate streak by going backwards from today
   // Streak = consecutive days ending today where each day either:
   // - Has a completed task, OR
-  // - Has no pending/overdue tasks
+  // - Has tasks in the system AND has no pending/overdue tasks
   let streak = 0;
   let lastCountedDate: string | null = null;
   let currentDate = new Date(today);
+  
+  // If user has no tasks at all, streak is 0
+  if (assignments.length === 0) {
+    return {
+      streak: 0,
+      lastStreakDate: null
+    };
+  }
   
   // Limit to prevent infinite loops
   const maxDays = 365;
@@ -173,7 +181,8 @@ function calculateStreak(
     
     // Day counts if:
     // 1. A task was completed on this day (only counts once per day, even if multiple tasks)
-    // 2. OR there are no pending/overdue tasks on this day
+    // 2. OR there are tasks in the system AND there are no pending/overdue tasks on this day
+    // Note: We already checked assignments.length > 0 above, so we know there are tasks
     if (hasCompletedTask || !hasPendingOrOverdue) {
       streak++;
       lastCountedDate = dateKey;
@@ -230,8 +239,21 @@ async function getBestStreak(
     const stats = userStats[0];
     let bestStreak = stats.best_streak;
     
-    // Update best streak if current streak is higher
-    if (currentStreak > bestStreak) {
+    // If best streak is 365 and current streak is 0, it's likely incorrect data from the bug
+    // Reset best streak to 0 in this case
+    if (bestStreak === 365 && currentStreak === 0) {
+      bestStreak = 0;
+      await query(
+        `UPDATE user_stats 
+         SET best_streak = ?, 
+             current_streak = ?, 
+             last_streak_date = ?,
+             last_streak_update = ? 
+         WHERE user_id = ?`,
+        [0, currentStreak, lastStreakDate, today, userId]
+      );
+    } else if (currentStreak > bestStreak) {
+      // Update best streak if current streak is higher
       await query(
         `UPDATE user_stats 
          SET best_streak = ?, 
