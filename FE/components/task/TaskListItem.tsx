@@ -107,7 +107,7 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
       onClick={onTaskClick}
     >
       {/* Checkbox */}
-      <td className="px-4 py-2.5">
+      <td className="px-4 py-2.5 w-12">
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={task.status === 'completed'}
@@ -138,14 +138,14 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
       </td>
 
       {/* Lists (Course) */}
-      <td className="px-4 py-2.5 hidden sm:table-cell overflow-hidden">
+      <td className="px-4 py-2.5 hidden sm:table-cell overflow-hidden w-40">
         <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-700 truncate max-w-full">
           {task.course_name}
         </span>
       </td>
 
       {/* Due Date */}
-      <td className="px-4 py-2.5">
+      <td className="px-4 py-2.5 w-32">
         <div className="flex items-center gap-1.5">
           {isOverdue && (
             <AlertCircle className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
@@ -162,7 +162,7 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
       </td>
 
       {/* Priority */}
-      <td className="px-4 py-2.5 hidden md:table-cell">
+      <td className="px-4 py-2.5 hidden md:table-cell w-20">
         <div className="flex items-center justify-center">
           {task.type === 'assignment' ? (
             <Flag className={cn("w-4 h-4", priorityFlagColors[task.priority])} />
@@ -173,7 +173,7 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
       </td>
 
       {/* Status */}
-      <td className="px-4 py-2.5">
+      <td className="px-4 py-2.5 w-28">
         <Button
           variant="outline"
           size="sm"

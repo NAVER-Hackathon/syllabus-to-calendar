@@ -1,8 +1,6 @@
 'use client';
 
-import { TaskCard } from './TaskCard';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { TaskListItem } from './TaskListItem';
 import { TaskDetail } from './TaskDetail';
 import { useState } from 'react';
 
@@ -50,39 +48,47 @@ export function TaskGroup({ title, count, tasks, onTaskUpdate, onStatusChange, o
 
   return (
     <>
-      <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-6">
         {/* Group Header */}
-        <div className="flex items-center justify-between mb-4 px-1">
+        <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-gray-800 tracking-tight">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
               {title}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
               {count}
             </span>
           </div>
         </div>
 
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => handleTaskClick(task)}
-            />
-          ))}
-          
-          {/* Add Task Button Card */}
-          <div 
-            onClick={onAddTask}
-            className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-white hover:border-primary/50 hover:shadow-sm transition-all duration-200 cursor-pointer min-h-[180px]"
-          >
-            <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-primary/20 transition-all duration-200 shadow-sm">
-              <Plus className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
-            </div>
-            <span className="text-sm font-semibold text-gray-500 group-hover:text-primary transition-colors">Add New Task</span>
-          </div>
+        {/* Table Layout */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-2 text-left w-12"></th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell w-40">Lists</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Due Date</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell w-20">Priority</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tasks.map((task) => (
+                <TaskListItem
+                  key={task.id}
+                  task={task}
+                  onTaskClick={() => handleTaskClick(task)}
+                  onStatusChange={(status) => {
+                    if (onStatusChange) {
+                      onStatusChange(task.id, status);
+                    }
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -56,49 +56,26 @@ export default async function CoursesPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header Section */}
-      <div className="mb-6 space-y-4">
+      <div className="mb-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500 mb-2">
               Courses
             </p>
-            <h1 className="text-3xl font-bold text-gray-900">Your syllabi hub</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
             <p className="text-sm text-gray-500 mt-1">
               {courses.length === 0
                 ? 'Upload a syllabus or add a course manually to start planning.'
                 : `Tracking ${courses.length} ${courses.length === 1 ? 'course' : 'courses'} across the term.`}
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="border-dashed border-gray-300 text-gray-700" asChild>
-              <Link href="/courses/new">
-                <Plus className="w-4 h-4 mr-2" />
-                Upload syllabus
-              </Link>
+          <Link href="/courses/new">
+            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Course
             </Button>
-            <Link href="/courses/new">
-              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Course
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </div>
-
-        {/* Filter Section */}
-        {courses.length > 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Organize your view</p>
-                <p className="text-xs text-gray-500">
-                  Filter by term, instructor, or course status to focus your planning.
-                </p>
-              </div>
-              <CourseFilter />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Content Section */}

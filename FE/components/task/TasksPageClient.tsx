@@ -5,8 +5,7 @@ import { TaskList } from './TaskList';
 import { TaskFilters } from './TaskFilters';
 import { TaskSort, SortField, SortDirection } from './TaskSort';
 import { Card } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
-import { TaskListSkeleton } from './TaskListSkeleton';
+import { Plus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -126,7 +125,7 @@ export function TasksPageClient({ initialTasks, initialStats, courses }: TasksPa
             </h1>
             <p className="text-gray-500 max-w-2xl leading-relaxed">
               {stats.total > 0
-                ? `You have ${stats.total} ${stats.total === 1 ? 'task' : 'tasks'} scheduled. Stay organized and track your progress across all your courses.`
+                ? 'Stay organized and track your progress across all your courses.'
                 : 'Welcome to your task board. Upload a syllabus or add a milestone to start building your plan.'}
             </p>
           </div>
@@ -146,65 +145,39 @@ export function TasksPageClient({ initialTasks, initialStats, courses }: TasksPa
           </div>
         </div>
 
-        {/* Stats Overview (Optional - can be expanded) */}
-        {stats.total > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-gray-500 mb-1">Total Tasks</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-amber-600 mb-1">Pending</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.pending}</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-blue-600 mb-1">In Progress</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.inProgress}</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-emerald-600 mb-1">Completed</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.completed}</div>
-            </div>
-          </div>
-        )}
-
         {/* Filters and Sort Bar */}
         {stats.total > 0 && (
-          <div className="sticky top-4 z-30 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-gray-200/60 shadow-sm transition-all hover:shadow-md">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-              <div className="flex-1 w-full lg:w-auto">
-                <TaskFilters
-                  statusFilter={statusFilter}
-                  courseFilter={courseFilter}
-                  courses={courses}
-                  onStatusChange={setStatusFilter}
-                  onCourseChange={setCourseFilter}
-                  stats={{
-                    pending: stats.pending,
-                    inProgress: stats.inProgress,
-                    completed: stats.completed,
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-                <div className="h-8 w-px bg-gray-200 mx-2 hidden lg:block" />
-                <TaskSort
-                  sortField={sortField}
-                  sortDirection={sortDirection}
-                  onSortChange={(field, direction) => {
-                    setSortField(field);
-                    setSortDirection(direction);
-                  }}
-                />
-              </div>
-            </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-gray-200">
+            <TaskFilters
+              statusFilter={statusFilter}
+              courseFilter={courseFilter}
+              courses={courses}
+              onStatusChange={setStatusFilter}
+              onCourseChange={setCourseFilter}
+              stats={{
+                pending: stats.pending,
+                inProgress: stats.inProgress,
+                completed: stats.completed,
+              }}
+            />
+            <TaskSort
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSortChange={(field, direction) => {
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+            />
           </div>
         )}
 
         {/* Task List */}
         <div className="min-h-[400px]">
           {loading ? (
-            <TaskListSkeleton count={6} />
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              <p className="text-sm text-gray-500">Loading tasks...</p>
+            </div>
           ) : (
             <TaskList 
               tasks={tasks} 

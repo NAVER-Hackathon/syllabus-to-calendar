@@ -317,23 +317,6 @@ export default function CalendarPage() {
                         event={selectedEvent}
                         onExpand={() => setDetailDrawerOpen(true)}
                     />
-                    <div className="mt-4 rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm space-y-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Legend</p>
-                        <div className="space-y-2 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#2563eb' }} />
-                                Assignments
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#dc2626' }} />
-                                Exams
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full border border-dashed border-gray-400" />
-                                Milestones & classes use the course color
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
