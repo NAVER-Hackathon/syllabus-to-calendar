@@ -3,6 +3,7 @@
 import { TaskListItem } from './TaskListItem';
 import { TaskDetail } from './TaskDetail';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface Task {
   id: string;
@@ -50,31 +51,36 @@ export function TaskGroup({ title, count, tasks, onTaskUpdate, onStatusChange, o
     <>
       <div className="mb-6">
         {/* Group Header */}
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-center gap-3">
+            <h2 className={cn(
+              "text-sm font-bold uppercase tracking-wider",
+              title === "Overdue" 
+                ? "text-red-600" 
+                : "text-gray-700"
+            )}>
               {title}
             </h2>
-            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
               {count}
             </span>
           </div>
         </div>
 
         {/* Table Layout */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
+          <table className="w-full table-fixed">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-2 text-left w-12"></th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell w-40">Lists</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Due Date</th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell w-20">Priority</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Status</th>
+                <th className="px-6 py-3 text-left w-14"></th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Task</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell w-44">Course</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Due Date</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell w-24">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100/80">
               {tasks.map((task) => (
                 <TaskListItem
                   key={task.id}
@@ -83,6 +89,20 @@ export function TaskGroup({ title, count, tasks, onTaskUpdate, onStatusChange, o
                   onStatusChange={(status) => {
                     if (onStatusChange) {
                       onStatusChange(task.id, status);
+                    }
+                  }}
+                  onPriorityChange={async (priority) => {
+                    try {
+                      const response = await fetch(`/api/tasks/${task.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ priority }),
+                      });
+                      if (response.ok && onTaskUpdate) {
+                        onTaskUpdate();
+                      }
+                    } catch (error) {
+                      console.error('Error updating task priority:', error);
                     }
                   }}
                 />

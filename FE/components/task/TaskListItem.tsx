@@ -2,11 +2,12 @@
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, FileText, GraduationCap, Flag, AlertCircle, Link2 } from 'lucide-react';
+import { FileText, GraduationCap, Flag, Link2 } from 'lucide-react';
 import { COURSE_ICONS } from '@/constants/course-icons';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TaskPriorityDropdown } from './TaskPriorityDropdown';
+import { TaskStatusDropdown } from './TaskStatusDropdown';
 
 interface Task {
   id: string;
@@ -29,14 +30,23 @@ interface TaskListItemProps {
   task: Task;
   onTaskClick: () => void;
   onStatusChange?: (status: 'pending' | 'in-progress' | 'completed') => void;
+  onPriorityChange?: (priority: 'low' | 'medium' | 'high') => void;
 }
 
-export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItemProps) {
+export function TaskListItem({ task, onTaskClick, onStatusChange, onPriorityChange }: TaskListItemProps) {
   const dueDate = new Date(task.due_date);
   const now = new Date();
-  const isOverdue = dueDate < now && task.status !== 'completed';
-  const isDueToday = dueDate.toDateString() === now.toDateString();
-  const isDueTomorrow = dueDate.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+  
+  // Normalize dates to midnight for accurate comparison
+  const dueDateNormalized = new Date(dueDate);
+  dueDateNormalized.setHours(0, 0, 0, 0);
+  const nowNormalized = new Date(now);
+  nowNormalized.setHours(0, 0, 0, 0);
+  
+  // A task is overdue only if it's due before today (not including today)
+  const isOverdue = dueDateNormalized < nowNormalized && task.status !== 'completed';
+  const isDueToday = dueDateNormalized.getTime() === nowNormalized.getTime();
+  const isDueTomorrow = dueDateNormalized.getTime() === nowNormalized.getTime() + 86400000;
 
   // Type icons
   const typeIcons = {
@@ -46,13 +56,6 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
   };
 
   const TypeIcon = typeIcons[task.type];
-
-  // Priority flag colors - monochromatic
-  const priorityFlagColors = {
-    low: 'text-gray-300',
-    medium: 'text-gray-500',
-    high: 'text-gray-700',
-  };
 
   const formatDate = (date: Date) => {
     if (isDueToday) return 'Today';
@@ -78,16 +81,6 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
     });
   };
 
-  const handleStatusClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onStatusChange && task.type === 'assignment') {
-      // Cycle through statuses: pending -> in-progress -> completed -> pending
-      const statusOrder: ('pending' | 'in-progress' | 'completed')[] = ['pending', 'in-progress', 'completed'];
-      const currentIndex = statusOrder.indexOf(task.status);
-      const nextIndex = (currentIndex + 1) % statusOrder.length;
-      onStatusChange(statusOrder[nextIndex]);
-    }
-  };
 
   // Convert hex to rgba
   const hexToRgba = (hex: string, alpha: number) => {
@@ -100,14 +93,13 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
   return (
     <tr 
       className={cn(
-        "hover:bg-gray-50/50 transition-colors cursor-pointer group",
-        task.status === 'completed' && "opacity-60 bg-gray-50/30",
-        isOverdue && "bg-red-50/30"
+        "hover:bg-gray-50/80 transition-colors cursor-pointer group",
+        task.status === 'completed' && "opacity-70 bg-gray-50/40"
       )}
       onClick={onTaskClick}
     >
       {/* Checkbox */}
-      <td className="px-4 py-2.5 w-12">
+      <td className="px-6 py-4 w-14 align-middle">
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={task.status === 'completed'}
@@ -121,51 +113,74 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
         </div>
       </td>
 
-      {/* Name */}
-      <td className="px-4 py-2.5 overflow-hidden">
-        <div className="flex items-center gap-2 min-w-0">
-          <TypeIcon className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-          <span className={cn(
-            "text-sm font-medium text-gray-900 truncate",
-            task.status === 'completed' && "line-through text-gray-500"
+      {/* Task Name */}
+      <td className="px-6 py-4 overflow-hidden align-middle">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={cn(
+            "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+            task.status === 'completed'
+              ? "bg-gray-100 text-gray-400"
+              : "bg-gray-50 text-gray-500 group-hover:bg-gray-100"
           )}>
-            {task.title}
-          </span>
-          {task.description && (
-            <Link2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1" />
-          )}
+            <TypeIcon className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className={cn(
+              "text-sm font-semibold text-gray-900 truncate block",
+              task.status === 'completed' && "line-through text-gray-500"
+            )}>
+              {task.title}
+            </span>
+            {task.description && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Link2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-xs text-gray-500 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                  {task.description.substring(0, 40)}...
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </td>
 
-      {/* Lists (Course) */}
-      <td className="px-4 py-2.5 hidden sm:table-cell overflow-hidden w-40">
-        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-700 truncate max-w-full">
-          {task.course_name}
-        </span>
+      {/* Course */}
+      <td className="px-6 py-4 hidden sm:table-cell overflow-hidden w-44 align-middle">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: task.course_color }}
+          />
+          <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200/60 truncate max-w-full">
+            {task.course_name}
+          </span>
+        </div>
       </td>
 
       {/* Due Date */}
-      <td className="px-4 py-2.5 w-32">
-        <div className="flex items-center gap-1.5">
-          {isOverdue && (
-            <AlertCircle className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
-          )}
+      <td className="px-6 py-4 w-36 align-middle">
+        <div className="flex flex-col">
           <span className={cn(
-            "text-sm whitespace-nowrap",
-            isOverdue && "text-gray-900 font-semibold",
-            isDueToday && "text-gray-800 font-medium",
-            !isOverdue && !isDueToday && "text-gray-600"
+            "text-sm font-semibold whitespace-nowrap",
+            isOverdue && "text-red-600",
+            !isOverdue && "text-gray-700"
           )}>
             {formatDate(dueDate)}
           </span>
+          {isOverdue && (
+            <span className="text-xs text-red-600 font-medium mt-0.5">Overdue</span>
+          )}
         </div>
       </td>
 
       {/* Priority */}
-      <td className="px-4 py-2.5 hidden md:table-cell w-20">
-        <div className="flex items-center justify-center">
-          {task.type === 'assignment' ? (
-            <Flag className={cn("w-4 h-4", priorityFlagColors[task.priority])} />
+      <td className="px-6 py-4 hidden md:table-cell w-24 align-middle">
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          {task.type === 'assignment' || task.type === 'exam' ? (
+            <TaskPriorityDropdown
+              currentPriority={task.priority}
+              taskType={task.type}
+              onPriorityChange={onPriorityChange}
+            />
           ) : (
             <span className="text-gray-300 text-sm">—</span>
           )}
@@ -173,22 +188,14 @@ export function TaskListItem({ task, onTaskClick, onStatusChange }: TaskListItem
       </td>
 
       {/* Status */}
-      <td className="px-4 py-2.5 w-28">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleStatusClick}
-          className={cn(
-            "h-6 px-2.5 text-xs font-medium rounded-full border transition-all",
-            task.status === 'pending' && "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100",
-            task.status === 'in-progress' && "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200",
-            task.status === 'completed' && "bg-gray-200 border-gray-300 text-gray-900 hover:bg-gray-300",
-            task.type !== 'assignment' && "cursor-default bg-gray-50 border-gray-200 text-gray-500"
-          )}
-          disabled={task.type !== 'assignment'}
-        >
-          {task.status === 'in-progress' ? 'In Progress' : task.status === 'completed' ? 'Done' : 'To Do'}
-        </Button>
+      <td className="px-6 py-4 w-36 align-middle">
+        <div onClick={(e) => e.stopPropagation()}>
+          <TaskStatusDropdown
+            currentStatus={task.status}
+            taskType={task.type}
+            onStatusChange={onStatusChange}
+          />
+        </div>
       </td>
     </tr>
   );

@@ -32,7 +32,15 @@ interface TaskCardProps {
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const dueDate = new Date(task.due_date);
   const now = new Date();
-  const isOverdue = dueDate < now && task.status !== 'completed';
+  
+  // Normalize dates to midnight for accurate comparison
+  const dueDateNormalized = new Date(dueDate);
+  dueDateNormalized.setHours(0, 0, 0, 0);
+  const nowNormalized = new Date(now);
+  nowNormalized.setHours(0, 0, 0, 0);
+  
+  // A task is overdue only if it's due before today (not including today)
+  const isOverdue = dueDateNormalized < nowNormalized && task.status !== 'completed';
   const isDueSoon = !isOverdue && (dueDate.getTime() - now.getTime()) < 7 * 24 * 60 * 60 * 1000;
 
   // Get icon component

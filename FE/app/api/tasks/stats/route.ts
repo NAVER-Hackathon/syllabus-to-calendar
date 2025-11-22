@@ -55,8 +55,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate statistics (same logic as tasks page)
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const overdueCount = tasks.filter(t => {
       const dueDate = new Date(t.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      // A task is overdue only if it's due before today (not including today)
       return dueDate < now && t.status !== 'completed';
     }).length;
 

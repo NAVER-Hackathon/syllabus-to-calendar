@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
         WHERE c.user_id = ? ${courseCondition}
       )
       ORDER BY 
-        CASE WHEN due_date < NOW() AND status != 'completed' THEN 0 ELSE 1 END,
+        CASE WHEN DATE(due_date) < CURDATE() AND status != 'completed' THEN 0 ELSE 1 END,
         due_date ASC
     `;
 
@@ -168,9 +168,17 @@ export async function GET(request: NextRequest) {
     const sortedTasks = [...tasks].sort((a, b) => {
       let comparison = 0;
       
-      // Always prioritize overdue tasks first
-      const aOverdue = new Date(a.due_date) < new Date() && a.status !== 'completed';
-      const bOverdue = new Date(b.due_date) < new Date() && b.status !== 'completed';
+      // Normalize dates to midnight for accurate overdue comparison
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const aDueDate = new Date(a.due_date);
+      aDueDate.setHours(0, 0, 0, 0);
+      const bDueDate = new Date(b.due_date);
+      bDueDate.setHours(0, 0, 0, 0);
+      
+      // Always prioritize overdue tasks first (due before today, not including today)
+      const aOverdue = aDueDate < now && a.status !== 'completed';
+      const bOverdue = bDueDate < now && b.status !== 'completed';
       if (aOverdue && !bOverdue) return -1;
       if (!aOverdue && bOverdue) return 1;
 
@@ -200,16 +208,22 @@ export async function GET(request: NextRequest) {
     let filteredTasks = sortedTasks;
     if (overdueOnly) {
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
       filteredTasks = sortedTasks.filter(task => {
         const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        // A task is overdue only if it's due before today (not including today)
         return dueDate < now && task.status !== 'completed';
       });
     }
 
     // Calculate statistics
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const overdueCount = tasks.filter(t => {
       const dueDate = new Date(t.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      // A task is overdue only if it's due before today (not including today)
       return dueDate < now && t.status !== 'completed';
     }).length;
 

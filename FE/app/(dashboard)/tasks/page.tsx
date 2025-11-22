@@ -103,8 +103,8 @@ export default async function TasksPage() {
       JOIN courses c ON m.course_id = c.id
       WHERE c.user_id = ?
     )
-    ORDER BY 
-      CASE WHEN due_date < NOW() AND status != 'completed' THEN 0 ELSE 1 END,
+      ORDER BY 
+      CASE WHEN DATE(due_date) < CURDATE() AND status != 'completed' THEN 0 ELSE 1 END,
       due_date ASC
   `;
 
@@ -112,8 +112,11 @@ export default async function TasksPage() {
 
   // Calculate statistics
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
   const overdueCount = tasks.filter(t => {
     const dueDate = new Date(t.due_date);
+    dueDate.setHours(0, 0, 0, 0);
+    // A task is overdue only if it's due before today (not including today)
     return dueDate < now && t.status !== 'completed';
   }).length;
 

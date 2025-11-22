@@ -38,7 +38,15 @@ export function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps) {
 
   const dueDate = new Date(task.due_date);
   const now = new Date();
-  const isOverdue = dueDate < now && currentStatus !== 'completed';
+  
+  // Normalize dates to midnight for accurate comparison
+  const dueDateNormalized = new Date(dueDate);
+  dueDateNormalized.setHours(0, 0, 0, 0);
+  const nowNormalized = new Date(now);
+  nowNormalized.setHours(0, 0, 0, 0);
+  
+  // A task is overdue only if it's due before today (not including today)
+  const isOverdue = dueDateNormalized < nowNormalized && currentStatus !== 'completed';
 
   // Get icon component
   const getIconComponent = (iconName?: string): LucideIcon => {
