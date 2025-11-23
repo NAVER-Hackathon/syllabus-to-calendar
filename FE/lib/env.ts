@@ -13,6 +13,7 @@ interface DatabaseConfig {
 
 /**
  * Get required environment variable or throw error
+ * Trims whitespace and newlines to prevent common configuration errors
  */
 function getRequiredEnv(key: string): string {
   const value = process.env[key];
@@ -22,14 +23,27 @@ function getRequiredEnv(key: string): string {
       `Please set it in your .env file or environment.`
     );
   }
-  return value;
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(
+      `Environment variable ${key} is set but empty (only whitespace). ` +
+      `Please provide a valid value.`
+    );
+  }
+  return trimmed;
 }
 
 /**
  * Get optional environment variable with default
+ * Trims whitespace and newlines to prevent common configuration errors
  */
 function getOptionalEnv(key: string, defaultValue: string): string {
-  return process.env[key] || defaultValue;
+  const value = process.env[key];
+  if (!value) {
+    return defaultValue;
+  }
+  const trimmed = value.trim();
+  return trimmed || defaultValue; // If trimmed is empty, use default
 }
 
 /**
