@@ -53,13 +53,14 @@ export async function POST(request: NextRequest) {
       // Convert File to Buffer
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      
+
       // Save to /tmp for immediate use (but it won't persist across functions)
       await writeFile(filePath, buffer);
 
       // Save file metadata AND content to database for persistence across serverless functions
       const uploadId = randomUUID();
       try {
+        console.log(`📝 Saving upload to DB: ${fileName}, size: ${file.size}, buffer length: ${buffer.length}`);
         await query(
           `INSERT INTO syllabus_uploads 
           (id, user_id, file_name, original_name, file_path, file_type, file_size, file_content, status) 
@@ -76,8 +77,11 @@ export async function POST(request: NextRequest) {
             "uploading",
           ]
         );
+        console.log(`✅ Upload saved to DB with file_content: ${uploadId}`);
       } catch (dbError) {
-        console.error("Database error:", dbError);
+        console.error("❌ Database error saving upload:", dbError);
+        console.error("   Error code:", (dbError as any)?.code);
+        console.error("   Error message:", (dbError as any)?.message);
         // Continue even if DB save fails
       }
 
