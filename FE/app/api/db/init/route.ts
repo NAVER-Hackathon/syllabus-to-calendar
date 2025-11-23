@@ -10,7 +10,7 @@ import { getPool } from "@/lib/db";
  */
 export async function POST() {
   try {
-    const pool = getPool();
+    const pool = await getPool();
     
     // Read SQL schema file
     const schemaPath = join(process.cwd(), "lib", "db-schema.sql");
@@ -49,7 +49,7 @@ export async function POST() {
  */
 export async function GET() {
   try {
-    const pool = getPool();
+    const pool = await getPool();
     const [rows] = await pool.execute("SELECT 1 as test");
     
     return NextResponse.json({

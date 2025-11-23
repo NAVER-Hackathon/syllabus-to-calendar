@@ -13,7 +13,7 @@ async function initDatabase() {
   try {
     console.log("🚀 Initializing database...");
     
-    const pool = getPool();
+    const pool = await getPool();
     
     // Drop existing tables in reverse order (to handle foreign keys)
     console.log("🗑️  Dropping existing tables...");

@@ -37,7 +37,7 @@ export async function GET() {
 
     // Check 2: Database connection
     try {
-      const pool = getPool();
+      const pool = await getPool();
       const [result] = await pool.execute("SELECT 1 as test, NOW() as current_time");
       diagnostics.checks.connection = {
         status: "ok",

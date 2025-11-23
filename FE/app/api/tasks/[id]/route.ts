@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const pool = getPool();
+    const pool = await getPool();
     let updateQuery = '';
     const updates: string[] = [];
     const values: any[] = [];

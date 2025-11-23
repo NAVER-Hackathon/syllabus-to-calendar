@@ -31,7 +31,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const pool = getPool();
+    const pool = await getPool();
 
     // Remove dependent records first to satisfy FK constraints
     await pool.execute("DELETE FROM assignments WHERE course_id = ?", [
@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     values.push(courseId, userId);
 
-    const pool = getPool();
+    const pool = await getPool();
     await pool.execute(
       `UPDATE courses SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`,
       values

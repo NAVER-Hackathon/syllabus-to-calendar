@@ -1,15 +1,57 @@
 import mysql from "mysql2/promise";
 import { getDatabaseConfig } from "./env";
+import { lookup } from "dns/promises";
 
 // Database connection configuration
 // All credentials must be provided via environment variables
 let dbConfig: mysql.PoolOptions | null = null;
+let hostnameResolved: Promise<string> | null = null;
 
-function getDbConfig(): mysql.PoolOptions {
+/**
+ * Resolve hostname to IP address if it's not already an IP
+ * This helps with DNS resolution issues on some platforms (like Vercel)
+ * Caches the resolution result to avoid repeated DNS lookups
+ */
+function resolveHost(hostname: string): Promise<string> {
+  // If it's already an IP address, return as-is
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return Promise.resolve(hostname);
+  }
+
+  // If we're already resolving this hostname, return the same promise
+  if (hostnameResolved) {
+    return hostnameResolved;
+  }
+
+  // Start DNS resolution
+  hostnameResolved = (async () => {
+    try {
+      const addresses = await lookup(hostname, { family: 4 });
+      console.log(`✅ Resolved ${hostname} to ${addresses.address}`);
+      return addresses.address;
+    } catch (error) {
+      // If DNS resolution fails, log warning and return original hostname
+      // This will cause connection to fail, but with a clearer error
+      console.warn(`⚠️ DNS resolution failed for ${hostname}. Error:`, error);
+      console.warn(`   Using hostname directly. Connection may fail if DNS is not resolvable.`);
+      return hostname;
+    }
+  })();
+
+  return hostnameResolved;
+}
+
+async function getDbConfig(): Promise<mysql.PoolOptions> {
   if (!dbConfig) {
     const config = getDatabaseConfig();
+    
+    // Resolve hostname to IP if DNS resolution is problematic
+    // This helps with Vercel's DNS servers that may not resolve certain domains
+    const resolvedHost = await resolveHost(config.host);
+    
     const dbConfigObj: mysql.PoolOptions = {
       ...config,
+      host: resolvedHost, // Use resolved IP address
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
@@ -18,7 +60,7 @@ function getDbConfig(): mysql.PoolOptions {
       // Add connection timeout
       connectTimeout: 10000, // 10 seconds
     };
-    
+
     // SSL configuration - only add if explicitly enabled
     // NAVER Cloud DB doesn't require SSL by default
     if (process.env.DB_SSL === "true") {
@@ -27,7 +69,7 @@ function getDbConfig(): mysql.PoolOptions {
       };
     }
     // If DB_SSL is not set or false, don't include ssl property at all
-    
+
     dbConfig = dbConfigObj;
   }
   return dbConfig;
@@ -35,18 +77,30 @@ function getDbConfig(): mysql.PoolOptions {
 
 // Create connection pool
 let pool: mysql.Pool | null = null;
+let poolInitializing: Promise<mysql.Pool> | null = null;
 
-export function getPool(): mysql.Pool {
-  if (!pool) {
-    const config = getDbConfig();
-    pool = mysql.createPool(config);
+export async function getPool(): Promise<mysql.Pool> {
+  if (pool) {
+    return pool;
   }
-  return pool;
+  
+  if (poolInitializing) {
+    return poolInitializing;
+  }
+  
+  poolInitializing = (async () => {
+    const config = await getDbConfig();
+    pool = mysql.createPool(config);
+    poolInitializing = null;
+    return pool;
+  })();
+  
+  return poolInitializing;
 }
 
 // Get a single connection (for transactions)
 export async function getConnection(): Promise<mysql.PoolConnection> {
-  const pool = getPool();
+  const pool = await getPool();
   return await pool.getConnection();
 }
 
@@ -56,7 +110,7 @@ export async function query<T = any>(
   params?: any[]
 ): Promise<T[]> {
   try {
-    const pool = getPool();
+    const pool = await getPool();
     const [rows] = await pool.execute(sql, params);
     return rows as T[];
   } catch (error) {

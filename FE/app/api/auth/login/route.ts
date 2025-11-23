@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(body);
 
     // Apply rate limiting (strict: 5 attempts per 15 minutes per IP+email)
-    const rateLimitConfig = getRateLimitConfig('STRICT', validatedData.email);
+    const rateLimitConfig = getRateLimitConfig("STRICT", validatedData.email);
     const rateLimitResult = await rateLimit(request, rateLimitConfig);
 
     if (!rateLimitResult.success) {
@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     // Authenticate user
     // Always perform authentication check to prevent timing attacks
     // Use consistent timing regardless of whether user exists
-    const user = await authenticateUser(validatedData.email, validatedData.password);
+    const user = await authenticateUser(
+      validatedData.email,
+      validatedData.password
+    );
 
     if (!user) {
       // Don't reset rate limit on failed authentication
@@ -39,12 +42,12 @@ export async function POST(request: NextRequest) {
       // Generic error message prevents account enumeration
       return NextResponse.json(
         { error: "Invalid email or password" },
-        { 
+        {
           status: 401,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
           },
         }
       );
@@ -84,9 +87,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Add rate limit headers (limit was reset, so show full limit)
-    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-    response.headers.set('X-RateLimit-Remaining', rateLimitResult.limit.toString());
-    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+    response.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
+    response.headers.set(
+      "X-RateLimit-Remaining",
+      rateLimitResult.limit.toString()
+    );
+    response.headers.set("X-RateLimit-Reset", rateLimitResult.reset.toString());
 
     return response;
   } catch (error) {
@@ -99,35 +105,39 @@ export async function POST(request: NextRequest) {
 
     // Log detailed error for debugging
     console.error("Login error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     // Check if it's a database connection error
-    if (errorMessage.includes("ECONNREFUSED") || 
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("Access denied") ||
-        errorMessage.includes("Unknown database")) {
+    if (
+      errorMessage.includes("ECONNREFUSED") ||
+      errorMessage.includes("ETIMEDOUT") ||
+      errorMessage.includes("ENOTFOUND") ||
+      errorMessage.includes("Access denied") ||
+      errorMessage.includes("Unknown database")
+    ) {
       console.error("Database connection error details:", {
         message: errorMessage,
-        stack: errorStack
+        stack: errorStack,
       });
       return NextResponse.json(
-        { 
+        {
           error: "Database connection failed",
-          details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+          details:
+            process.env.NODE_ENV === "development" ? errorMessage : undefined,
         },
         { status: 500 }
       );
     }
 
     return NextResponse.json(
-      { 
+      {
         error: "Failed to authenticate",
-        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+        details:
+          process.env.NODE_ENV === "development" ? errorMessage : undefined,
       },
       { status: 500 }
     );
   }
 }
-
