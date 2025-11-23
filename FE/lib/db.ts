@@ -68,9 +68,14 @@ async function getDbConfig(): Promise<mysql.PoolOptions> {
   if (!dbConfig) {
     const config = getDatabaseConfig();
     
+    // Log original hostname for debugging
+    console.log(`🔍 Original DB hostname: "${config.host}" (length: ${config.host.length})`);
+    
     // Resolve hostname to IP if DNS resolution is problematic
     // This helps with Vercel's DNS servers that may not resolve certain domains
     const resolvedHost = await resolveHost(config.host);
+    
+    console.log(`🔍 Resolved DB host: "${resolvedHost}"`);
     
     const dbConfigObj: mysql.PoolOptions = {
       ...config,
@@ -112,10 +117,38 @@ export async function getPool(): Promise<mysql.Pool> {
   }
   
   poolInitializing = (async () => {
-    const config = await getDbConfig();
-    pool = mysql.createPool(config);
-    poolInitializing = null;
-    return pool;
+    try {
+      const config = await getDbConfig();
+      console.log(`🔌 Creating database connection pool to ${config.host}:${config.port}/${config.database}`);
+      pool = mysql.createPool(config);
+      
+      // Test the connection immediately
+      try {
+        const testConnection = await pool.getConnection();
+        await testConnection.ping();
+        testConnection.release();
+        console.log(`✅ Database connection pool created and tested successfully`);
+      } catch (testError: any) {
+        console.error(`❌ Database connection test failed:`, {
+          message: testError.message,
+          code: testError.code,
+          errno: testError.errno,
+          sqlState: testError.sqlState,
+        });
+        // Don't throw here - let the actual query fail with a clearer error
+      }
+      
+      poolInitializing = null;
+      return pool;
+    } catch (error: any) {
+      console.error(`❌ Failed to create database connection pool:`, {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+      });
+      poolInitializing = null;
+      throw error;
+    }
   })();
   
   return poolInitializing;
