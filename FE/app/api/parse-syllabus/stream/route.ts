@@ -10,7 +10,7 @@ import {
 import { normalizedToParsedSyllabus } from "@/lib/syllabus-normalizer";
 
 // Use /tmp directory on Vercel serverless, local uploads directory otherwise
-const UPLOAD_DIR = process.env.VERCEL 
+const UPLOAD_DIR = process.env.VERCEL
   ? join("/tmp", "uploads")
   : join(process.cwd(), "uploads");
 const getBackendApiUrl = () =>
@@ -68,12 +68,11 @@ export async function POST(request: NextRequest) {
 
     const fileBuffer = await readFile(filePath);
     const originalName = join(UPLOAD_DIR, fileId).split("/").pop() || fileId;
-    const mimeType =
-      originalName.toLowerCase().endsWith(".pdf")
-        ? "application/pdf"
-        : originalName.toLowerCase().match(/\.(png|jpg|jpeg)$/)
-        ? "image/png"
-        : "application/octet-stream";
+    const mimeType = originalName.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : originalName.toLowerCase().match(/\.(png|jpg|jpeg)$/)
+      ? "image/png"
+      : "application/octet-stream";
 
     const formData = new FormData();
     formData.append(
@@ -198,4 +197,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

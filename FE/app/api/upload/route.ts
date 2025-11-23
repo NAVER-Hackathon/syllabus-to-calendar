@@ -12,7 +12,7 @@ import { resolveUserId } from "@/lib/user-resolver";
 // For development, we'll store files in a local uploads directory
 // For Vercel/serverless, use /tmp which is the only writable directory
 // In production, you'd want to use cloud storage (S3, Vercel Blob, etc.)
-const UPLOAD_DIR = process.env.VERCEL 
+const UPLOAD_DIR = process.env.VERCEL
   ? join("/tmp", "uploads")
   : join(process.cwd(), "uploads");
 
@@ -31,10 +31,7 @@ export async function POST(request: NextRequest) {
     const files = formData.getAll("files") as File[];
 
     if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: "No files provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
     const uploadedFiles = [];
@@ -43,10 +40,7 @@ export async function POST(request: NextRequest) {
       // Validate file
       const validation = validateFile(file);
       if (!validation.valid) {
-        return NextResponse.json(
-          { error: validation.error },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: validation.error }, { status: 400 });
       }
 
       // Generate unique filename
@@ -97,10 +91,10 @@ export async function POST(request: NextRequest) {
     // Update status to processing
     if (uploadedFiles.length > 0 && uploadedFiles[0].id) {
       try {
-        await query(
-          `UPDATE syllabus_uploads SET status = ? WHERE id = ?`,
-          ["processing", uploadedFiles[0].id]
-        );
+        await query(`UPDATE syllabus_uploads SET status = ? WHERE id = ?`, [
+          "processing",
+          uploadedFiles[0].id,
+        ]);
       } catch (dbError) {
         console.error("Database update error:", dbError);
       }
@@ -168,7 +162,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (!fileId) {
-      return NextResponse.json({ error: "fileId or uploadId required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "fileId or uploadId required" },
+        { status: 400 }
+      );
     }
 
     // Check if file exists

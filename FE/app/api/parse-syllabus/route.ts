@@ -7,7 +7,7 @@ import { NormalizedSyllabusResult, ParsedSyllabus } from "@/types/syllabus";
 import { normalizedToParsedSyllabus } from "@/lib/syllabus-normalizer";
 
 // Use /tmp directory on Vercel serverless, local uploads directory otherwise
-const UPLOAD_DIR = process.env.VERCEL 
+const UPLOAD_DIR = process.env.VERCEL
   ? join("/tmp", "uploads")
   : join(process.cwd(), "uploads");
 const getBackendApiUrl = () =>
@@ -64,12 +64,11 @@ export async function POST(request: NextRequest) {
       }
     };
     const originalName = resolvedFilePath.split("/").pop() || fileId;
-    const mimeType =
-      originalName.toLowerCase().endsWith(".pdf")
-        ? "application/pdf"
-        : originalName.toLowerCase().match(/\.(png|jpg|jpeg)$/)
-        ? "image/png"
-        : "application/octet-stream";
+    const mimeType = originalName.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : originalName.toLowerCase().match(/\.(png|jpg|jpeg)$/)
+      ? "image/png"
+      : "application/octet-stream";
 
     const formData = new FormData();
     formData.append(
@@ -88,10 +87,10 @@ export async function POST(request: NextRequest) {
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
-      console.error('[parse-syllabus] Backend error:', {
+      console.error("[parse-syllabus] Backend error:", {
         status: backendResponse.status,
         statusText: backendResponse.statusText,
-        errorText
+        errorText,
       });
       if (uploadId) {
         await query(
@@ -103,14 +102,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Backend service failed: ${errorText || backendResponse.statusText}`,
+          error: `Backend service failed: ${
+            errorText || backendResponse.statusText
+          }`,
         },
         { status: backendResponse.status }
       );
     }
 
-    const normalized: NormalizedSyllabusResult =
-      await backendResponse.json();
+    const normalized: NormalizedSyllabusResult = await backendResponse.json();
 
     if (!normalized.success) {
       if (uploadId) {
@@ -185,10 +185,10 @@ export async function PATCH(request: NextRequest) {
 
     // Update upload record with course ID
     if (courseId) {
-      await query(
-        "UPDATE syllabus_uploads SET course_id = ? WHERE id = ?",
-        [courseId, uploadId]
-      );
+      await query("UPDATE syllabus_uploads SET course_id = ? WHERE id = ?", [
+        courseId,
+        uploadId,
+      ]);
     }
 
     return NextResponse.json({
@@ -199,10 +199,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to update upload",
+        error:
+          error instanceof Error ? error.message : "Failed to update upload",
       },
       { status: 500 }
     );
   }
 }
-
