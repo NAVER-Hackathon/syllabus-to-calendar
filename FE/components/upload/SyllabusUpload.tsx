@@ -199,10 +199,6 @@ export function SyllabusUpload() {
       setCreateStatus({ type: "error", message: "Course name is required" });
       return;
     }
-    if (!editableCourse.startDate || !editableCourse.endDate) {
-      setCreateStatus({ type: "error", message: "Start and end dates are required" });
-      return;
-    }
 
     setCreatingCourse(true);
     setCreateStatus(null);

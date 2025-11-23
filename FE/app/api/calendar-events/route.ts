@@ -49,16 +49,6 @@ interface DbMilestoneItem {
     type: 'milestone';
 }
 
-// Interface for Courses (All-day)
-interface DbCourseItem {
-    id: string;
-    title: string;
-    date: string;
-    course_name: string;
-    course_color: string;
-    type: 'course';
-}
-
 export async function GET(request: Request) {
     try {
         const session = await requireAuth();
@@ -143,22 +133,6 @@ export async function GET(request: Request) {
 
         const classSchedules = await query<DbClassItem>(classQuery, classParams);
 
-        // --- Query 5: Get Courses (All-day event on start date) ---
-        let courseQuery = `SELECT 
-            id, name as title, start_date as date,
-            name as course_name, color as course_color, 'course' as type
-        FROM courses
-        WHERE user_id = ? AND start_date IS NOT NULL`;
-
-        const courseParams: any[] = [userId];
-
-        if (courseId) {
-            courseQuery += ` AND id = ?`;
-            courseParams.push(courseId);
-        }
-
-        const courses = await query<DbCourseItem>(courseQuery, courseParams);
-
         // --- Format Assignments ---
         for (const item of assignments) {
             if (item.date) {
@@ -234,45 +208,6 @@ export async function GET(request: Request) {
                     indicatorColor: item.course_color,
                 }
             });
-        }
-
-        // --- Format Courses (All-day) ---
-        let courseWithDatesQuery = `SELECT 
-            id, name as title, start_date as date, end_date,
-            name as course_name, color as course_color, 'course' as type
-        FROM courses
-        WHERE user_id = ? AND start_date IS NOT NULL`;
-
-        const courseWithDatesParams: any[] = [userId];
-
-        if (courseId) {
-            courseWithDatesQuery += ` AND id = ?`;
-            courseWithDatesParams.push(courseId);
-        }
-
-        const coursesWithDates = await query<DbCourseItem & { end_date: string }>(
-            courseWithDatesQuery,
-            courseWithDatesParams
-        );
-
-        for (const item of coursesWithDates) {
-            if (item.date) {
-                events.push({
-                    id: `course-${item.id}`,
-                    title: `Start: ${item.title}`,
-                    start: item.date,
-                    allDay: true,
-                    backgroundColor: item.course_color,
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        type: item.type,
-                        courseName: item.course_name,
-                        courseStartDate: item.date,
-                        courseEndDate: item.end_date,
-                        indicatorColor: item.course_color,
-                    }
-                });
-            }
         }
 
         return NextResponse.json(events);

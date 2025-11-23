@@ -7,6 +7,10 @@ async function processOCR(filePath, originalName) {
   const SECRET_KEY_OCR = process.env.SECRET_KEY_OCR;
   const CLOVA_OCR_URL = process.env.CLOVA_OCR_URL;
 
+  if (!CLOVA_OCR_URL || CLOVA_OCR_URL.includes('your_ocr_url')) {
+    throw new Error("Invalid CLOVA_OCR_URL configuration. Please check your .env file.");
+  }
+
   const imageFile = fs.readFileSync(filePath);
   const fileExtension = originalName.split('.').pop().toLowerCase();
   

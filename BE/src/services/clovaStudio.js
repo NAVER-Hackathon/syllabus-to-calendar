@@ -5,6 +5,10 @@ const { jsonrepair } = require("jsonrepair");
 async function processWithAI(ocrText, systemPrompt, userPrompt) {
   const { CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_URL } = process.env;
 
+  if (!CLOVA_STUDIO_URL || CLOVA_STUDIO_URL.includes('your_clova_studio_url')) {
+    throw new Error("Invalid CLOVA_STUDIO_URL configuration. Please check your .env file.");
+  }
+
   const requestBody = {
     messages: [
       { role: "system", content: systemPrompt },

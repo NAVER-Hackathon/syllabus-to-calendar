@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
+      console.error('[parse-syllabus] Backend error:', {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+        errorText
+      });
       if (uploadId) {
         await query(
           "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",

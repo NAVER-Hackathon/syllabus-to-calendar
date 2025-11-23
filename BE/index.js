@@ -10,6 +10,31 @@ const chatRoutes = require("./src/routes/chatRoutes");
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Validate required environment variables
+const requiredEnvVars = [
+  'SECRET_KEY_OCR',
+  'CLOVA_OCR_URL',
+  'CLOVA_STUDIO_API_KEY',
+  'CLOVA_STUDIO_URL'
+];
+
+const missingVars = requiredEnvVars.filter(key => !process.env[key]);
+const invalidVars = requiredEnvVars.filter(key => {
+  const value = process.env[key];
+  return value && (value.includes('your_') || value.length < 10);
+});
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  process.exit(1);
+}
+
+if (invalidVars.length > 0) {
+  console.error('❌ Invalid environment variables (likely placeholders):', invalidVars.join(', '));
+  console.error('Please update .env with actual values.');
+  process.exit(1);
+}
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
