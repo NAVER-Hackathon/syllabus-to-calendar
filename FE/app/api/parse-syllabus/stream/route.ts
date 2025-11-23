@@ -9,7 +9,10 @@ import {
 } from "@/types/syllabus";
 import { normalizedToParsedSyllabus } from "@/lib/syllabus-normalizer";
 
-const UPLOAD_DIR = join(process.cwd(), "uploads");
+// Use /tmp directory on Vercel serverless, local uploads directory otherwise
+const UPLOAD_DIR = process.env.VERCEL 
+  ? join("/tmp", "uploads")
+  : join(process.cwd(), "uploads");
 const getBackendApiUrl = () =>
   (process.env.BACKEND_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
