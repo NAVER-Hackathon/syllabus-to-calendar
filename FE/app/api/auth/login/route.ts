@@ -97,9 +97,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log detailed error for debugging
     console.error("Login error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    // Check if it's a database connection error
+    if (errorMessage.includes("ECONNREFUSED") || 
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("Access denied") ||
+        errorMessage.includes("Unknown database")) {
+      console.error("Database connection error details:", {
+        message: errorMessage,
+        stack: errorStack
+      });
+      return NextResponse.json(
+        { 
+          error: "Database connection failed",
+          details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to authenticate" },
+      { 
+        error: "Failed to authenticate",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

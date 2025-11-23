@@ -48,9 +48,22 @@ export async function query<T = any>(
   sql: string,
   params?: any[]
 ): Promise<T[]> {
-  const pool = getPool();
-  const [rows] = await pool.execute(sql, params);
-  return rows as T[];
+  try {
+    const pool = getPool();
+    const [rows] = await pool.execute(sql, params);
+    return rows as T[];
+  } catch (error) {
+    // Log detailed database error
+    console.error("Database query error:", {
+      sql,
+      params: params ? params.map(() => '?') : [],
+      error: error instanceof Error ? error.message : error,
+      code: (error as any)?.code,
+      errno: (error as any)?.errno,
+      sqlState: (error as any)?.sqlState,
+    });
+    throw error;
+  }
 }
 
 // Execute a query and return first result
@@ -69,4 +82,3 @@ export async function closePool(): Promise<void> {
     pool = null;
   }
 }
-
