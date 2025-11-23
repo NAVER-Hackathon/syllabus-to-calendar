@@ -29,7 +29,8 @@ function resolveHost(hostname: string): Promise<string> {
     return Promise.resolve(cleanHostname);
   }
 
-  // Check if we have a known IP for this hostname (fallback)
+  // PRIORITY: Check if we have a known IP for this hostname FIRST
+  // This avoids DNS lookup for hostnames that we know Vercel can't resolve
   if (KNOWN_HOSTNAME_IPS[cleanHostname]) {
     console.log(`✅ Using known IP for ${cleanHostname}: ${KNOWN_HOSTNAME_IPS[cleanHostname]}`);
     return Promise.resolve(KNOWN_HOSTNAME_IPS[cleanHostname]);
@@ -40,14 +41,14 @@ function resolveHost(hostname: string): Promise<string> {
     return hostnameResolved;
   }
 
-  // Start DNS resolution
+  // Start DNS resolution (only if no known IP exists)
   hostnameResolved = (async () => {
     try {
       const addresses = await lookup(cleanHostname, { family: 4 });
       console.log(`✅ Resolved ${cleanHostname} to ${addresses.address}`);
       return addresses.address;
     } catch (error) {
-      // If DNS resolution fails, check for known IP fallback
+      // If DNS resolution fails, check for known IP fallback (double-check)
       if (KNOWN_HOSTNAME_IPS[cleanHostname]) {
         console.warn(`⚠️ DNS resolution failed for ${cleanHostname}, using known IP fallback: ${KNOWN_HOSTNAME_IPS[cleanHostname]}`);
         return KNOWN_HOSTNAME_IPS[cleanHostname];
