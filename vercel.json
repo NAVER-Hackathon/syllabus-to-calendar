@@ -1,0 +1,19 @@
+{
+	"buildCommand": "cd FE && npm install && npm run build",
+	"outputDirectory": "FE/.next",
+	"devCommand": "cd FE && npm run dev",
+	"installCommand": "cd FE && npm install",
+	"framework": "nextjs",
+	"regions": [
+		"sin1"
+	],
+	"env": {
+		"DB_HOST": "@db_host",
+		"DB_USER": "@db_user",
+		"DB_PASSWORD": "@db_password",
+		"DB_NAME": "@db_name",
+		"DB_PORT": "@db_port",
+		"NEXTAUTH_SECRET": "@nextauth_secret",
+		"BACKEND_API_URL": "@backend_api_url"
+	}
+}
