@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
       // Save file metadata AND content to database for persistence across serverless functions
       const uploadId = randomUUID();
       try {
-        console.log(`📝 Saving upload to DB: ${fileName}, size: ${file.size}, buffer length: ${buffer.length}`);
+        console.log(
+          `📝 Saving upload to DB: ${fileName}, size: ${file.size}, buffer length: ${buffer.length}`
+        );
         await query(
           `INSERT INTO syllabus_uploads 
           (id, user_id, file_name, original_name, file_path, file_type, file_size, file_content, status) 

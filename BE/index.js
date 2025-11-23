@@ -38,8 +38,11 @@ if (invalidVars.length > 0) {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Use /tmp on Vercel (serverless), local uploads/ otherwise
+const UPLOAD_DIR = process.env.VERCEL ? "/tmp/uploads" : "uploads";
+
 const upload = multer({
-  dest: "uploads/",
+  dest: UPLOAD_DIR,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedExt = /\.(jpe?g|png|pdf)$/i;
@@ -57,7 +60,10 @@ const upload = multer({
   },
 });
 
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  console.log(`✅ Created upload directory: ${UPLOAD_DIR}`);
+}
 
 app.get("/", (req, res) => {
   res.send(`

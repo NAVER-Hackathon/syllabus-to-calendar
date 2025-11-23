@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
     const body: ParseRequest = await request.json();
     const { fileId, uploadId } = body;
 
+    console.log("[parse-syllabus] Request received:", {
+      fileId,
+      uploadId,
+      backendUrl: getBackendApiUrl(),
+    });
+
     if (!fileId) {
       return NextResponse.json(
         { success: false, error: "fileId is required" },
@@ -44,15 +50,27 @@ export async function POST(request: NextRequest) {
 
     // Check filesystem first
     if (existsSync(resolvedFilePath)) {
+      console.log(
+        "[parse-syllabus] Reading file from filesystem:",
+        resolvedFilePath
+      );
       fileBuffer = await readFile(resolvedFilePath);
     } else if (uploadId) {
       // If not in filesystem, try to get from database (cross-function scenario)
+      console.log(
+        "[parse-syllabus] File not in filesystem, querying database for uploadId:",
+        uploadId
+      );
       const upload = await queryOne(
         "SELECT file_content FROM syllabus_uploads WHERE id = ?",
         [uploadId]
       );
 
       if (!upload || !upload.file_content) {
+        console.error(
+          "[parse-syllabus] File not found in database for uploadId:",
+          uploadId
+        );
         await query(
           "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
           ["failed", "File not found on server or in database", uploadId]
@@ -64,9 +82,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      console.log(
+        "[parse-syllabus] File retrieved from database, size:",
+        upload.file_content.length
+      );
       fileBuffer = Buffer.from(upload.file_content);
     } else {
       // No uploadId and no file in filesystem
+      console.error("[parse-syllabus] No uploadId and no file in filesystem");
       return NextResponse.json(
         { success: false, error: "File not found" },
         { status: 404 }
@@ -96,12 +119,22 @@ export async function POST(request: NextRequest) {
       originalName
     );
 
-    const backendResponse = await fetch(
-      `${getBackendApiUrl()}/process-syllabus`,
-      {
-        method: "POST",
-        body: formData,
-      }
+    const backendUrl = `${getBackendApiUrl()}/process-syllabus`;
+    console.log("[parse-syllabus] Sending to backend:", {
+      backendUrl,
+      fileSize: fileBuffer.length,
+      mimeType,
+      originalName,
+    });
+
+    const backendResponse = await fetch(backendUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log(
+      "[parse-syllabus] Backend response status:",
+      backendResponse.status
     );
 
     if (!backendResponse.ok) {
@@ -170,7 +203,12 @@ export async function POST(request: NextRequest) {
       uploadId: uploadId || null,
     });
   } catch (error) {
-    console.error("Parse error:", error);
+    console.error("[parse-syllabus] Parse error:", error);
+    console.error("[parse-syllabus] Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      backendUrl: getBackendApiUrl(),
+    });
     if (filePath) {
       try {
         await unlink(filePath);
