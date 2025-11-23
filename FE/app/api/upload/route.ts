@@ -10,8 +10,11 @@ import { requireAuth } from "@/lib/session";
 import { resolveUserId } from "@/lib/user-resolver";
 
 // For development, we'll store files in a local uploads directory
-// In production, you'd want to use cloud storage (S3, etc.)
-const UPLOAD_DIR = join(process.cwd(), "uploads");
+// For Vercel/serverless, use /tmp which is the only writable directory
+// In production, you'd want to use cloud storage (S3, Vercel Blob, etc.)
+const UPLOAD_DIR = process.env.VERCEL 
+  ? join("/tmp", "uploads")
+  : join(process.cwd(), "uploads");
 
 // Ensure upload directory exists
 if (!existsSync(UPLOAD_DIR)) {
