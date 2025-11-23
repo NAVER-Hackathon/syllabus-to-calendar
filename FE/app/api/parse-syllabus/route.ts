@@ -36,23 +36,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Try to read from filesystem first (for same-function uploads)
     const resolvedFilePath = join(UPLOAD_DIR, fileId);
     filePath = resolvedFilePath;
-    if (!existsSync(resolvedFilePath)) {
-      if (uploadId) {
+    
+    let fileBuffer: Buffer;
+    
+    // Check filesystem first
+    if (existsSync(resolvedFilePath)) {
+      fileBuffer = await readFile(resolvedFilePath);
+    } else if (uploadId) {
+      // If not in filesystem, try to get from database (cross-function scenario)
+      const upload = await queryOne(
+        "SELECT file_content FROM syllabus_uploads WHERE id = ?",
+        [uploadId]
+      );
+      
+      if (!upload || !upload.file_content) {
         await query(
           "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
-          ["failed", "File not found on server", uploadId]
+          ["failed", "File not found on server or in database", uploadId]
+        );
+        
+        return NextResponse.json(
+          { success: false, error: "File not found" },
+          { status: 404 }
         );
       }
-
+      
+      fileBuffer = Buffer.from(upload.file_content);
+    } else {
+      // No uploadId and no file in filesystem
       return NextResponse.json(
         { success: false, error: "File not found" },
         { status: 404 }
       );
     }
-
-    const fileBuffer = await readFile(resolvedFilePath);
     let shouldCleanupFile = true;
     const cleanupUploadedFile = async () => {
       if (!shouldCleanupFile) return;
