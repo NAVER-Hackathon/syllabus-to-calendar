@@ -1,8 +1,8 @@
 {
-	"buildCommand": "cd FE && npm install && npm run build",
-	"outputDirectory": "FE/.next",
-	"devCommand": "cd FE && npm run dev",
-	"installCommand": "cd FE && npm install",
+	"buildCommand": "npm run build",
+	"outputDirectory": ".next",
+	"devCommand": "npm run dev",
+	"installCommand": "npm install",
 	"framework": "nextjs",
 	"regions": [
 		"sin1"
