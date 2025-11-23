@@ -8,14 +8,31 @@ let dbConfig: mysql.PoolOptions | null = null;
 let hostnameResolved: Promise<string> | null = null;
 
 /**
+ * Known IP addresses for NAVER Cloud DB hostnames
+ * Used as fallback when DNS resolution fails
+ */
+const KNOWN_HOSTNAME_IPS: Record<string, string> = {
+  'db-3c34ls-kr.vpc-pub-cdb.ntruss.com': '49.50.131.166',
+};
+
+/**
  * Resolve hostname to IP address if it's not already an IP
  * This helps with DNS resolution issues on some platforms (like Vercel)
  * Caches the resolution result to avoid repeated DNS lookups
  */
 function resolveHost(hostname: string): Promise<string> {
+  // Clean hostname (remove any trailing newlines/whitespace)
+  const cleanHostname = hostname.trim();
+  
   // If it's already an IP address, return as-is
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-    return Promise.resolve(hostname);
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(cleanHostname)) {
+    return Promise.resolve(cleanHostname);
+  }
+
+  // Check if we have a known IP for this hostname (fallback)
+  if (KNOWN_HOSTNAME_IPS[cleanHostname]) {
+    console.log(`✅ Using known IP for ${cleanHostname}: ${KNOWN_HOSTNAME_IPS[cleanHostname]}`);
+    return Promise.resolve(KNOWN_HOSTNAME_IPS[cleanHostname]);
   }
 
   // If we're already resolving this hostname, return the same promise
@@ -26,15 +43,20 @@ function resolveHost(hostname: string): Promise<string> {
   // Start DNS resolution
   hostnameResolved = (async () => {
     try {
-      const addresses = await lookup(hostname, { family: 4 });
-      console.log(`✅ Resolved ${hostname} to ${addresses.address}`);
+      const addresses = await lookup(cleanHostname, { family: 4 });
+      console.log(`✅ Resolved ${cleanHostname} to ${addresses.address}`);
       return addresses.address;
     } catch (error) {
-      // If DNS resolution fails, log warning and return original hostname
-      // This will cause connection to fail, but with a clearer error
-      console.warn(`⚠️ DNS resolution failed for ${hostname}. Error:`, error);
+      // If DNS resolution fails, check for known IP fallback
+      if (KNOWN_HOSTNAME_IPS[cleanHostname]) {
+        console.warn(`⚠️ DNS resolution failed for ${cleanHostname}, using known IP fallback: ${KNOWN_HOSTNAME_IPS[cleanHostname]}`);
+        return KNOWN_HOSTNAME_IPS[cleanHostname];
+      }
+      
+      // If no fallback, log warning and return original hostname
+      console.warn(`⚠️ DNS resolution failed for ${cleanHostname}. Error:`, error);
       console.warn(`   Using hostname directly. Connection may fail if DNS is not resolvable.`);
-      return hostname;
+      return cleanHostname;
     }
   })();
 
