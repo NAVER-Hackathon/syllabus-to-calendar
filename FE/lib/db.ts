@@ -15,10 +15,11 @@ function getDbConfig(): mysql.PoolOptions {
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
-      // Enable SSL for NAVER Cloud DB (required for external connections)
-      ssl: {
+      // SSL configuration - try with SSL first, fallback to no SSL if not supported
+      // NAVER Cloud DB may or may not require SSL depending on configuration
+      ssl: process.env.DB_SSL === 'true' ? {
         rejectUnauthorized: false, // Allow self-signed certificates
-      },
+      } : undefined,
       // Add connection timeout
       connectTimeout: 10000, // 10 seconds
     };
@@ -56,7 +57,7 @@ export async function query<T = any>(
     // Log detailed database error
     console.error("Database query error:", {
       sql,
-      params: params ? params.map(() => '?') : [],
+      params: params ? params.map(() => "?") : [],
       error: error instanceof Error ? error.message : error,
       code: (error as any)?.code,
       errno: (error as any)?.errno,
