@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { existsSync } from "fs";
 import { join } from "path";
 import { readFile, unlink } from "fs/promises";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { NormalizedSyllabusResult, ParsedSyllabus } from "@/types/syllabus";
 import { normalizedToParsedSyllabus } from "@/lib/syllabus-normalizer";
 
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     // Try to read from filesystem first (for same-function uploads)
     const resolvedFilePath = join(UPLOAD_DIR, fileId);
     filePath = resolvedFilePath;
-    
+
     let fileBuffer: Buffer;
-    
+
     // Check filesystem first
     if (existsSync(resolvedFilePath)) {
       fileBuffer = await readFile(resolvedFilePath);
@@ -51,19 +51,19 @@ export async function POST(request: NextRequest) {
         "SELECT file_content FROM syllabus_uploads WHERE id = ?",
         [uploadId]
       );
-      
+
       if (!upload || !upload.file_content) {
         await query(
           "UPDATE syllabus_uploads SET status = ?, error_message = ? WHERE id = ?",
           ["failed", "File not found on server or in database", uploadId]
         );
-        
+
         return NextResponse.json(
           { success: false, error: "File not found" },
           { status: 404 }
         );
       }
-      
+
       fileBuffer = Buffer.from(upload.file_content);
     } else {
       // No uploadId and no file in filesystem
