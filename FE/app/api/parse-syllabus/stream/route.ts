@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const formData = new FormData();
     formData.append(
       "image",
-      new Blob([fileBuffer], { type: mimeType }),
+      new Blob([new Uint8Array(fileBuffer)], { type: mimeType }),
       originalName
     );
 
