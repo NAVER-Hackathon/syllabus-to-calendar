@@ -8,21 +8,27 @@ let dbConfig: mysql.PoolOptions | null = null;
 function getDbConfig(): mysql.PoolOptions {
   if (!dbConfig) {
     const config = getDatabaseConfig();
-    dbConfig = {
+    const dbConfigObj: mysql.PoolOptions = {
       ...config,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
-      // SSL configuration - try with SSL first, fallback to no SSL if not supported
-      // NAVER Cloud DB may or may not require SSL depending on configuration
-      ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: false, // Allow self-signed certificates
-      } : undefined,
       // Add connection timeout
       connectTimeout: 10000, // 10 seconds
     };
+    
+    // SSL configuration - only add if explicitly enabled
+    // NAVER Cloud DB doesn't require SSL by default
+    if (process.env.DB_SSL === "true") {
+      dbConfigObj.ssl = {
+        rejectUnauthorized: false, // Allow self-signed certificates
+      };
+    }
+    // If DB_SSL is not set or false, don't include ssl property at all
+    
+    dbConfig = dbConfigObj;
   }
   return dbConfig;
 }
