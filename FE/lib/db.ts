@@ -15,6 +15,12 @@ function getDbConfig(): mysql.PoolOptions {
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
+      // Enable SSL for NAVER Cloud DB (required for external connections)
+      ssl: {
+        rejectUnauthorized: false, // Allow self-signed certificates
+      },
+      // Add connection timeout
+      connectTimeout: 10000, // 10 seconds
     };
   }
   return dbConfig;
